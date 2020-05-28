@@ -16,3 +16,6 @@ source("dataload/d_traffic_locations.R")
 #Load traffic data and merge with traffic_location for DB, write result to DB
 trafficdata_source_directory = "\\\\unraiden.slink42.duckdns.org\\home\\stuart\\shared\\documents\\data\\discover.data.vic.gov.au\\vicroads\\Bicycle_Volume_Speed_2020\\"
 source("dataload/d_traffic_data.R")
+
+#Aggregate traffic data and upload to cosmos DB
+source("dataload/d_load_to_cosmos.R")

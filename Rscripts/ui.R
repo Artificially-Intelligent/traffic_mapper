@@ -10,10 +10,17 @@ vars <- c(
 pallet_vars <- rownames(brewer.pal.info)
 
 # pallet_vars <- rownames(subset(brewer.pal.info, category %in% c("seq", "div")))
-
-conn <- poolCheckout(db_pool)
-traffic_locations <- get_locations(conn = conn)
-poolReturn(conn)
+if (use_mongo) {
+  mgo_traffic_locations <-
+    mongo(db = "primary",
+          collection = "traffic_locations",
+          url = azure$mongo_url)
+  traffic_locations <- mgo_traffic_locations$find()
+} else{
+  conn <- poolCheckout(db_pool)
+  traffic_locations <- get_locations(conn = conn)
+  poolReturn(conn)
+}
 
 navbarPage(
   "Traffic Mapper",

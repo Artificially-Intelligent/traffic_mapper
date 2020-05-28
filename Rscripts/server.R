@@ -1,38 +1,45 @@
 
-# mgo <- mongo(db = "primary", collection = "bike_traffic", url=azure$mongo_url)
-# 
-# mgo$aggregate()
 
 ## Data Load ##########################################
 
-conn <- poolCheckout(db_pool)
-
-all_traffic_timeseries <-
-  get_traffic(
+if (use_mongo){
+  mgo_traffic_by_location <- mongo(db = "primary", collection = "traffic_by_location", url=azure$mongo_url)
+  all_traffic <- mgo_traffic_by_location$find()
+  
+  mgo_traffic_by_location_weekly <- mongo(db = "primary", collection = "traffic_by_location_weekly", url=azure$mongo_url)
+  all_traffic_timeseries <- mgo_traffic_by_location_weekly$find()
+}else{
+  conn <- poolCheckout(db_pool)
+  
+  all_traffic_timeseries <-
+    get_traffic(
       group_by = c(
-      "location",
-      "postcode",
-      "location_id",
-      "locality",
-      "location_description" ,
-      "week_start_date",
-      "hour_group"
-    ), conn = conn
-  ) %>%
-  data.frame()
-all_traffic <-
-  get_traffic(
-    group_by = c(
-      "location",
-      "postcode",
-      "location_id",
-      "locality",
-      "location_description"
-    ), conn = conn
-  ) %>%
-  data.frame()
+        "location",
+        "postcode",
+        "location_id",
+        "locality",
+        "location_description" ,
+        "week_start_date",
+        "hour_group"
+      ), conn = conn
+    ) %>%
+    data.frame()
+  all_traffic <-
+    get_traffic(
+      group_by = c(
+        "location",
+        "postcode",
+        "location_id",
+        "locality",
+        "location_description"
+      ), conn = conn
+    ) %>%
+    data.frame()
+  
+  poolReturn(conn)
+  
+}
 
-poolReturn(conn)
 
 cleantable <- all_traffic %>%
   select(
@@ -241,12 +248,12 @@ function(input, output, session) {
   showLocationPopup <- function(location, lat, lng) {
     selected_location <- all_traffic[all_traffic$location == location,]
     content <- as.character(tagList(
-      tags$h4(HTML(sprintf("%s - %s",
+      tags$h5(HTML(sprintf("%s - %s",
                            selected_location$locality,  selected_location$location_description
       ))),
-      tags$p( "Traffic Volume:", as.integer(selected_location$count), "(" , selected_location$count_pct ,"% of total)"),
-      tags$p( "Daily Average Volume:", as.integer(selected_location$avg_daily_count)),
-      tags$p( "Avg Speed:", as.integer(selected_location$avg_speed), "(Km/h)")
+      "Traffic Volume:", as.integer(selected_location$count), "(" , selected_location$count_pct ,"% of total)", tags$br(),
+      "Daily Average Volume:", as.integer(selected_location$avg_daily_count), tags$br(),
+      "Avg Speed:", as.integer(selected_location$avg_speed), "Km/h"
       # ,
       # sprintf("Median household income: %s", dollar(selected_location$income * 1000)), tags$br(),
       # sprintf("Percent of adults with BA: %s%%", as.integer(selected_location$college)), tags$br(),

@@ -601,10 +601,30 @@ Pie Chart Revisited
 https://rpubs.com/cardiomoon/398623
 
 ```{r}
+conn <- poolCheckout(db_pool)
 
-bike_traffic <- get_traffic(group_by = c('location', "direction")) %>% as.data.frame()
+bike_traffic <- get_traffic(conn=conn, group_by = c('direction', "hour_group")) %>% as.data.frame() %>%
+  
+    mutate(hour_group = as.factor(hour_group))
+summary(bike_traffic)
+poolReturn(conn)
 
-ggPieDonut(bike_traffic,aes(pies="direction",donuts="location",count="count"),interactive=TRUE)
+bike_traffic %>%
+  mutate(
+    
+    direction = as.factor(
+      case_when(
+        direction == "N" ~ "North",
+        direction == "S" ~ "South",
+        direction == "E" ~ "East",
+        direction == "W" ~ "West",
+        TRUE ~ direction
+      )
+      , levels = c("N", "S","E","W")
+))
+
+
+ggPieDonut(bike_traffic,aes(pies="direction",donuts="direction",count="hour_group"),interactive=TRUE)
 
 p <- ggPieDonut(
   data = bike_traffic,
@@ -754,11 +774,33 @@ ggplot(
 gg <-
   all_traffic_timeseries %>%
   # mutate(date = cut(date, "week")) %>%
-  group_by(date,hour_group) %>%
+  group_by(week_start_date,hour_group) %>%
   summarise(count = sum(count),
             day_count = sum(day_count),
             avg_daily_count = count / day_count ) %>%
-ggplot(
+
+  
+  ggPieDonut(
+  aes(
+    pies = "week_start_date",
+      donuts = "hour_group",
+    count = "count")
+  ,
+  interactive = TRUE,
+  addPieLabel = TRUE,
+  addDonutLabel = TRUE,
+  showRatioDonut = TRUE,
+  showRatioPie = TRUE,
+  showRatioPieAbove10 = TRUE,
+  title =  janitor::make_clean_names("bike path usage", case = "title"),
+  labelposition = 1,
+  polar = TRUE,
+  use.label = TRUE,
+  use.labels = TRUE
+)
+  
+  
+  ggplot(
     aes(
       x = date,
       y = avg_daily_count,
@@ -799,5 +841,8 @@ ggplot(
   if (interactive())
     print(x)
 
+  
+  ggPieDonut(traffic_by_location_weekly,aes(pies="week_start_date",donuts="hour_group",count="count"),interactive=TRUE)
+  
 ```
 

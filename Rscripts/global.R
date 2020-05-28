@@ -1,33 +1,45 @@
+suppressPackageStartupMessages({
+# Setup Packages
+    library(config)
+#Shiny Packages  
+  library(shiny)
+  library(shinycssloaders)
+  library(shinyjs)
+  library(shinyWidgets)
+  library(shinycssloaders)
 
-setup_packages <- c('config')
-shiny_packages <- c('shiny','shinycssloaders','shinyjs','shinyWidgets')
-formatting_packages <- c('stringr','scales','waiter','lubridate')
-data_packages <- c('dplyr', 'readxl', 'data.table', 'geojsonio', 'sf')
-db_packages <- c('RMySQL', 'DBI', 'pool','mongolite','here')
-graph_packages <-
-  c('ggplot2', 'ggiraph', 'ggiraphExtra', 'RColorBrewer','viridis','hrbrthemes','lattice')
-map_packages <- c('leaflet')
+#Formatting Packages
+  library(stringr)   
+  library(scales)   
+  library(waiter)   
+  library(lubridate)
 
-packages_required <-c(
-  setup_packages,
-  shiny_packages,
-  formatting_packages,
-  data_packages,
-  db_packages,
-  graph_packages,
-  map_packages,
-  c()
-)
+#Data Packages
+  library(dplyr)
+  library(readxl)
+  library(data.table)
+  # library(geojsonio)
+  # library(sf)
+  
+#DB Packages
+  library(RMySQL)
+  library(DBI)
+  library(pool)
+  library(mongolite)
+  library(here)
 
-packages_active <-
-  suppressPackageStartupMessages(lapply(
-    packages_required,
-    require,
-    character.only = TRUE
-  ))
+#Graph Packages
+  library(ggplot2)
+  library(ggiraph)
+  library(ggiraphExtra)
+  library(RColorBrewer)
+  library(viridis)
+  library(hrbrthemes)
+  library(lattice)
+#Map Packages
+  library(leaflet)
 
-
-write.csv(packages_required, file = 'packages.csv' ,row.names = FALSE ,quote = FALSE,eol=",")
+})
 
 # load functions
 source("server/s_data.R")
@@ -38,6 +50,8 @@ source("server/s_data.R")
 config <- config::get(file = Sys.getenv("R_CONFIG_FILE", "conf/config.yml"))
 dw <- config$datawarehouse
 azure <- config$azure_primary
+
+use_mongo = TRUE
 
 db_pool <- pool::dbPool(
   drv = RMySQL::MySQL(),

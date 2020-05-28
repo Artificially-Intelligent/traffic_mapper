@@ -91,17 +91,3 @@ dbWriteTable(conn,
 
 dbCommit(conn)   # or dbRollback(conn) if something went wrong
 poolReturn(conn)
-
-# glimpse(bike_traffic)
-install.packages('mongolite', repos = 'https://cran.microsoft.com/snapshot/2018-08-01')
-library(mongolite)
-url <- "mongodb://shiny:H26KAgdzCIkVsK5Njh8SlFCDV8O41SD0YbHY6dZnvUv6Ec70FNyKxMb8cvzso1FFSA0FYdZ6gkKCgw96onyEjA==@shiny.documents.azure.com:10255/mean-dev?ssl=true"
-
-# Write result to Cosmos DB
-
-bike_traffic <- bike_traffic[! is.na(bike_traffic$location),]
-
-mgo <- mongo(db = "primary", collection = "bike_traffic", url=azure$mongo_url)
-mgo$insert(bike_traffic)
-
-
