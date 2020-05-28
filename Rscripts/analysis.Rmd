@@ -1,0 +1,803 @@
+---
+title: "Melbourne Bike Traffic"
+author: "Stuart"
+date: "14/05/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+setup_packages <- c('config')
+formatting_packages <- c('stringr')
+data_packages <- c('dplyr', 'readxl', 'data.table', 'geojsonio', 'sf')
+db_packages <- c('RMySQL', 'DBI', 'pool')
+graph_packages <-
+  c('ggplot2', 'ggiraph', 'ggiraphExtra', 'RColorBrewer','viridis','hrbrthemes')
+map_packages <- c('leaflet')
+
+packages_active <-
+  suppressPackageStartupMessages(lapply(
+    c(
+      setup_packages,
+      formatting_packages,
+      data_packages,
+      db_packages,
+      graph_packages,
+      map_packages
+    ),
+    require,
+    character.only = TRUE
+  ))
+
+```
+
+
+
+```{r db connection}
+#### Ouput Database Auth Details ####
+
+dw <- config::get("datawarehouse")
+
+db_pool <- pool::dbPool(
+  drv = RMySQL::MySQL(),
+  host = dw$server,
+  dbname = dw$database,
+  user = dw$uid,
+  password = dw$pwd
+)
+
+get_traffic <- function(group_by = c('location'), table = "test_traffic") {
+  
+  conn <- poolCheckout(db_pool)
+  
+  aggregated_traffic <- pool::dbReadTable(conn, table) %>%
+    filter(postcode < 3900 & postcode >= 3000 ) %>%
+    mutate(
+      datetime = as.POSIXct(datetime),
+      location = paste(locality , "-", location_description),
+      weekday = factor(
+        format(datetime, '%A'),
+        levels = c(
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday",
+          "Saturday",
+          "Sunday"
+        ),
+      ),
+      date = format(datetime, '%Y-%m-%d'),
+      time = format(datetime, '%H:%M:%S'),
+      hour = as.numeric(format(datetime, format = "%H")),
+      hour_group = factor(case_when(
+        hour <  6 ~ "00-06",
+        hour < 12 ~ "06-12",
+        hour < 18 ~ "12-18",
+        hour < 24 ~ "18-24",
+        TRUE ~ as.character(hour)
+      )),
+      total_count = sum(count)
+    ) %>%
+    group_by_at(group_by) %>%
+    summarise(
+      lat = mean(lat),
+      long = mean(long),
+      total_speed = sum(sum_speed),
+      count = sum(count),
+      count_pct = 100 * count / mean(total_count) ,
+      day_count = length(unique(date)),
+      avg_speed = total_speed / count,
+      avg_daily_count = count / day_count
+    )
+  poolReturn(conn)
+  return(aggregated_traffic)
+}
+
+```
+
+## Summary
+
+Data source: Bicycle_Volume_Speed_2020
+Source location: <https://discover.data.vic.gov.au/>
+Date last accessed: 2020/05/04
+
+```{r location lookup functions}
+geojson_source_file = "\\\\unraiden.slink42.duckdns.org\\home\\stuart\\shared\\documents\\data\\mapshaper.org\\aus_postcodes\\POA_2016_AUST(TopoJSON 10%).json"
+aus_suburbs_geo <- geojsonio::topojson_read(geojson_source_file)
+
+# Load "sf" library
+aus.geojson <- st_read(geojson_source_file) # Find Prefecture function. It takes logitude/latitude vectors 
+# and returns a vector of prefecture names. 
+find_postcode <- function( lat, long, sp_polygon = aus.geojson) {
+  postcode <- character(0)
+  cnt = 1
+  # Iterate the vector data one by one
+  for(lo in long){
+    la <- lat[cnt]
+    # Check whether the point belongs to any of polygons.  
+    which.row <- sf::st_contains(sp_polygon, sf::st_point(c(lo, la)), sparse = FALSE) %>%  
+      grep(TRUE, .)
+    
+    # If the point doesn't belong to any polygons, return NA.
+    if (identical(which.row, integer(0)) == TRUE) {
+      postcode <- c(postcode, NA)
+    } else {
+      d <- sp_polygon[which.row, ]
+      area <- d$AREASQKM16
+      geometry <- d$geometry
+      postcode <- c(postcode, paste0(d$POA_CODE16))
+    }
+    cnt <- cnt+1
+  }
+  return (postcode)
+}
+
+
+location_info <- jsonify::from_json( 'https://www.matthewproctor.com/Content/postcodes/australian_postcodes.json')
+colnames(location_info) <- janitor::make_clean_names(colnames(location_info))
+location_info <- location_info[!duplicated(location_info$postcode),]
+row.names(location_info) <- location_info$postcode
+location_info  <- location_info  %>%
+  data.table()
+
+
+
+find_location_info <- function( lat, long, sp_polygon = aus.geojson, location_info = location_info) {
+ selected_postcode <- find_postcode(lat,long)  %>%
+  data.table()
+ colnames(selected_postcode) <- 'postcode'
+ selected_location_info <- location_info[selected_postcode, on = 'postcode']
+  
+ return(selected_location_info)
+}
+find_location_name <- function( lat, long, sp_polygon = aus.geojson, location_info = location_info) {
+  selected_location_info <-  find_location_info( lat, long, sp_polygon,location_info)
+  return(janitor::make_clean_names(selected_location_info$locality, case = "title"))
+}
+
+
+```
+
+
+Bicycle lane usage volume and speed trends.
+
+```{r bike_traffic_locations, echo=FALSE}
+trafficlocation_source_files = "\\\\unraiden.slink42.duckdns.org\\home\\stuart\\shared\\documents\\data\\discover.data.vic.gov.au\\vicroads\\VicRoads_Bike_Site_Number_Listing.xlsx"
+
+# Read source data for bike traffic measurement locations and filter list for locations in bike_traffic data
+bike_traffic_locations <-
+  data.table::rbindlist(lapply(trafficlocation_source_files,
+                               function(x) {
+                                 readxl::read_xlsx(x , skip = 1)
+                               })) %>%
+  mutate(LOCATION_ID = str_extract(`SITE NAME`, "^.+[P]")) %>%
+  # filter(LOCATION_ID %in% levels(factor(bike_traffic$LOCATION_ID))) %>%
+  data.table()
+
+
+bike_traffic_locations$lat <- as.numeric(str_extract(bike_traffic_locations$GPS,"[\\-\\+]\\d+.\\d+"))
+bike_traffic_locations$long <- as.numeric(str_extract(bike_traffic_locations$GPS, "\\ [\\-\\+]\\d+.\\d+"))
+
+colnames(bike_traffic_locations) <- janitor::make_clean_names(colnames(bike_traffic_locations))
+
+bike_traffic_locations_grouped <- bike_traffic_locations %>%
+  mutate(location_type =  str_extract(
+   str_extract(description, pattern = "\\(.+\\)")
+   ,pattern ="\\w+ \\w+" ),
+   location_description =  str_extract(description, pattern = "\\ \\w+\\ \\w+")
+  ) %>%
+  group_by(
+    site_name,
+    location_id,
+    location_description,
+    location_type
+  ) %>%
+  summarise(lat = mean(lat), long = mean(long))
+
+
+bike_traffic_location_info <- find_location_info(
+      bike_traffic_locations_grouped$lat,
+      bike_traffic_locations_grouped$long,
+      location_info = location_info
+    )
+
+bike_traffic_locations_grouped <-
+  cbind(
+    data.frame(bike_traffic_locations_grouped),
+    data.frame(bike_traffic_location_info)
+  )
+
+colnames(bike_traffic_locations_grouped) <- janitor::make_clean_names(colnames(bike_traffic_locations_grouped))
+
+
+bike_traffic_locations_grouped$location <-
+  paste(
+    bike_traffic_locations_grouped$locality ,
+    "-",
+    bike_traffic_locations_grouped$location_description
+  )
+
+conn <- poolCheckout(db_pool)
+dbWriteTable(db_pool, "traffic_location",bike_traffic_locations_grouped,overwrite = TRUE, row.names = FALSE)
+poolReturn(conn)
+
+```
+
+
+```{r bike_traffic_data, echo=FALSE}
+trafficdata_source_directory = "\\\\unraiden.slink42.duckdns.org\\home\\stuart\\shared\\documents\\data\\discover.data.vic.gov.au\\vicroads\\Bicycle_Volume_Speed_2020\\"
+
+# Read source data for bike traffic stats
+trafficdata_source_files <-
+  list.files(
+    trafficdata_source_directory,
+    pattern = "*.csv",
+    full.names = TRUE,
+    recursive = TRUE
+  )
+
+bike_traffic_data <-
+  data.table::rbindlist(lapply(trafficdata_source_files, read.csv))
+
+colnames(bike_traffic_data) <-
+  janitor::make_clean_names(colnames(bike_traffic_data))
+
+bike_traffic_data_grouped <- bike_traffic_data %>%
+  mutate(
+    location_id = paste(sep = "",  "D" , tis_data_request, "X", site_xn_route, "P"),
+    time = as.factor(paste(sep = "", substr(time, 1, 3), "00:00"))
+  )
+
+bike_traffic_data_grouped <- bike_traffic_data %>%
+  mutate(
+    location_id = paste(sep = "",  "D" , tis_data_request, "X", site_xn_route, "P"),
+    time = as.factor(paste(sep = "", substr(time, 1, 3), "00:00"))
+  ) %>%
+  mutate(datetime =  as.POSIXct(strptime(paste(date, time), format = '%d/%m/%Y %H:%M:%S'))) %>%
+  mutate(datetime = format(datetime, '%Y-%m-%d %H:%M:%S')) %>%
+  group_by(
+    location_id,
+    loc_leg,
+    direction,
+    lane,
+    datetime,
+    vehicle,
+    class,
+    axle,
+    axle_grouping,
+    data_type
+  ) %>%
+  summarise(
+    count = n(),
+    sum_speed = sum(speed),
+    sum_wheelbase = sum(wheelbase),
+    sum_headway =  sum(headway),
+    sum_gap = sum(gap),
+    sum_rho = sum(rho)
+  ) %>%
+  mutate(weekday_hour = paste(weekday, hour)) %>%
+  data.table()
+
+traffic_location <- dbReadTable(db_pool, "traffic_location")  %>%
+  data.table()
+
+# Merge traffic data and traffic location into a single datset
+bike_traffic <-
+  traffic_location[bike_traffic_data_grouped, on = 'location_id']
+
+conn <- poolCheckout(db_pool)
+dbWriteTable(conn,
+             "all_traffic",
+             bike_traffic,
+             overwrite = TRUE,
+             row.names = FALSE)
+dbSendQuery(conn,
+            "ALTER TABLE all_traffic MODIFY datetime datetime, MODIFY date date, MODIFY time time ;")
+poolReturn(conn)
+
+```
+
+
+```{r speed_plots, echo=FALSE}
+
+# 
+# plot(
+#   x = bike_traffic$WEEKDAY,
+#   y =  bike_traffic$SPEED ,
+#   ylab = "KM / H" ,
+#   xlab = "Weekday",
+#   main = "Speed distribution by Weekday"
+# )
+# plot(
+#   x = bike_traffic$HOUR,
+#   y =  bike_traffic$SPEED  ,
+#   ylab = "KM / H" ,
+#   xlab = "Hour",
+#   main = "Speed distribution by Hour"
+# )
+# plot(
+#   x = as.factor(paste(bike_traffic$WEEKDAY, bike_traffic$HOUR)),
+#   y =  bike_traffic$SPEED ,
+#   ylab = "KM/H" ,
+#   xlab = "Weekday Hour",
+#   main = "Speed distribution by Weekday Hour"
+# )
+
+```
+
+## Traffic Volume Distribution
+
+# Traffic Volume by Date
+
+```{r traffic_volume_by_date, echo=FALSE }
+bike_traffic <- get_traffic(group_by = c('date', 'location'))
+
+if (requireNamespace("dplyr", quietly = TRUE)) {
+  gg <- ggplot(
+    bike_traffic,
+    aes(
+      x = date,
+      y = count,
+      group = location,
+      colour = location,
+      tooltip = location,
+      data_id = location,
+      hover_css = "fill:none;",
+    )
+  ) +
+    labs(
+      title = "Traffic Volume By Date & Location",
+      subtitle = waiver(),
+      caption = waiver(),
+      tag = waiver()
+    ) +
+    ylab("Traffic Volume") +
+    xlab("Date") +
+    geom_line_interactive(size = 1,
+                          stat = 'identity')
+  # + theme(legend.position="none")
+  
+  x <- girafe(ggobj = gg, width = 15)
+  x <- girafe_options(x = x,
+                      opts_hover(css = "stroke:red;fill:orange"))
+  if (interactive())
+    print(x)
+}
+
+```
+
+# Traffic Volume by Hour
+
+```{r traffic_volume_by_hour}
+bike_traffic <- get_traffic(group_by = c('datetime', 'location'))
+
+if (requireNamespace("dplyr", quietly = TRUE)) {
+gg <- ggplot(
+bike_traffic,
+aes(
+x = datetime,
+y = count,
+colour = location,
+tooltip = location,
+data_id = location,
+hover_css = "fill:none;",
+)
+) +
+labs(
+title = "Traffic Volume By Date & Location",
+subtitle = waiver(),
+caption = waiver(),
+tag = waiver()
+) +
+ylab("Traffic Volume") +
+xlab("Date") +
+geom_line_interactive(size = 1,
+stat = 'identity')
+# + theme(legend.position="none")
+
+x <- girafe(ggobj = gg, width = 10)
+x <- girafe_options(x = x,
+opts_hover(css = "stroke:red;fill:orange"))
+if (interactive())
+print(x)
+
+}
+```
+
+# Traffic Volume By Weekday Hour
+
+```{r traffic_volume_by_weekday_hour}
+bike_traffic <- get_traffic(group_by = c('weekday', 'hour'))
+
+
+if (requireNamespace("dplyr", quietly = TRUE)) {
+  gg <- ggplot(
+    bike_traffic,
+    aes(
+      x = hour ,
+      y = avg_daily_count,
+      colour = weekday,
+      group = weekday,
+      tooltip = weekday,
+      data_id = weekday,
+      hover_css = "fill:none;"
+    )
+  ) +
+    geom_line_interactive(size = 1) +
+    labs(
+      colour = "Weekday",
+      title = "Traffic Volume By Date & Location",
+      subtitle = waiver(),
+      caption = waiver(),
+      tag = waiver()
+    ) +
+    ylab("Traffic Volume") +
+    xlab("Hour")
+  # + theme(legend.position="none")
+  
+  x <- girafe(ggobj = gg, width = 10)
+  x <- girafe_options(x = x,
+                      opts_hover(css = "stroke:red;fill:orange"))
+  if (interactive())
+    print(x)
+  
+}
+```
+
+
+```{r traffic_speed_by_weekday_hour}
+bike_traffic <- get_traffic(group_by = c('weekday', 'hour'))
+
+
+gg <- ggplot(
+  bike_traffic,
+  aes(
+    x = hour ,
+    y = avg_speed,
+    colour = weekday,
+    group = weekday,
+    tooltip = weekday,
+    data_id = weekday,
+    hover_css = "fill:none;"
+  )
+) +
+  geom_line_interactive(size = 1) +
+  labs(
+    colour = "Weekday",
+    title = "Average Traffic Speed By Weekday & Hour",
+    subtitle = waiver(),
+    caption = waiver(),
+    tag = waiver()
+  ) +
+  ylab("Average Speed KM/H") +
+  xlab("Hour")
+# + theme(legend.position="none")
+
+x <- girafe(ggobj = gg, width = 10)
+x <- girafe_options(x = x,
+                    opts_hover(css = "stroke:red;fill:orange"))
+if (interactive())
+  print(x)
+
+```
+
+# Traffic Volume by Location
+
+```{r traffic_volume_map}
+bike_traffic <- get_traffic(group_by = c('location'), table = "traffic")
+
+
+colour_schemes <-
+  rownames(subset(brewer.pal.info, category %in% c("seq", "div")))
+pal <- colorNumeric(colour_schemes[3], bike_traffic$count)
+
+content <- paste(sep = "<br/>",
+  "<b><a href='http://www.samurainoodle.com'>Samurai Noodle</a></b>",
+  "606 5th Ave. S",
+  "Seattle, WA 98138"
+)
+format(c(6, 13.1), digits = 3, nsmall = 1)
+bike_traffic$popup <- paste(
+  sep = "<br/>",
+  paste(sep = "","<b>", bike_traffic$location,"</b>"),
+  paste(
+    sep = "",
+    "Daily Traffic: ", format(bike_traffic$avg_daily_count, digits = 0),
+    " (",    format(bike_traffic$count_pct, digits = 1, nsmall = 1),
+    "%)"
+  ),
+  paste(
+    sep = "",
+    "Average Speed: ",
+    format(bike_traffic$avg_speed, digits = 0),
+    " KM/H"
+  )
+)
+
+map <- leaflet(bike_traffic) %>% 
+  addTiles() %>%
+  fitBounds(~ min(long), ~ min(lat), ~ max(long), ~ max(lat))
+
+map_zoom <- 13
+map %>%
+  addHeatmap(
+    lng =  ~ long,
+    lat =  ~ lat,
+    intensity =  ~ count_pct,
+    max = max(bike_traffic$count_pct),
+    radius =  ~ 15,
+    blur = 10
+  ) %>%
+  addCircles(
+    radius = ~ 7000 / map_zoom,
+    weight = 1,
+    color = "#777777",
+    fillColor = ~ pal(count),
+    fillOpacity = 0.0,
+    # opacity = 0.0,
+    popup = ~ paste(popup)
+  )
+
+
+# leafletProxy("map", data = bike_traffic) %>%
+#   clearShapes() %>%
+#   addCircles(radius = ~10^count/10, weight = 1, color = "#777777",
+#     fillColor = ~pal(count), fillOpacity = 0.7, popup = ~paste(location)
+#   )
+
+```
+
+
+```{r }
+bike_traffic <- get_traffic(group_by = c('location',"weekday",'hour'))
+
+
+y2_ratio <-
+  ((
+    max(
+      bike_traffic$total_speed / bike_traffic$count
+    )
+  )
+  / max(bike_traffic$count))
+
+gg = ggplot(bike_traffic,
+           aes(x = hour,
+               group = location)) +
+  facet_grid(weekday ~ .) +
+  geom_line(aes(y = avg_speed,
+                colour = location),
+            size = 1.5) +
+  geom_bar(
+    aes(y = count,
+        fill = location),
+    colour = "darkblue",
+    size = 0.2
+    ,
+    position = position_dodge(),
+    stat = "identity",
+    alpha = 0.8
+  ) +
+  coord_cartesian() +
+  
+  ggtitle("Bike Path Usage", "by hour of the day") +
+  ylab("Bike Count") +
+  xlab("Hour") +
+  scale_x_discrete(name = "Hour", breaks  =  substr(levels(bike_traffic$hour), 1, 2)[c(TRUE, FALSE)]) +
+  scale_y_continuous(sec.axis = sec_axis(~ . * y2_ratio, name = "Avg Speed Km/h"))
+
+x <- girafe(ggobj = gg, width = 15)
+  x <- girafe_options(x = x,
+                      opts_hover(css = "stroke:red;fill:orange"))
+  if (interactive())
+    print(x)
+
+
+```
+
+Pie Chart Revisited
+https://rpubs.com/cardiomoon/398623
+
+```{r}
+
+bike_traffic <- get_traffic(group_by = c('location', "direction")) %>% as.data.frame()
+
+ggPieDonut(bike_traffic,aes(pies="direction",donuts="location",count="count"),interactive=TRUE)
+
+p <- ggPieDonut(
+  data = bike_traffic,
+  aes(
+    pies = "direction",
+      donuts = "location",
+    count = "count")
+  ,
+  interactive = TRUE,
+  addPieLabel = TRUE,
+  addDonutLabel = TRUE,
+  showRatioDonut = TRUE,
+  showRatioPie = TRUE,
+  showRatioPieAbove10 = TRUE,
+  title =  janitor::make_clean_names("bike path usage", case = "title"),
+  labelposition = 1,
+  polar = TRUE,
+  use.label = TRUE,
+  use.labels = TRUE
+)
+x <- girafe(ggobj = p, width = 15)
+x <- girafe_options(x = x,
+                    opts_hover(css = "stroke:red;fill:orange"))
+if (interactive())
+  print(x)
+p
+
+d <- print(p)
+
+```
+
+
+```{r}
+data <- bike_traffic <- get_traffic(group_by = c('location')) %>% as.data.frame()
+
+
+
+data$value <- bike_traffic$count
+data$individual <- bike_traffic$location
+ 
+library(tidyverse)
+# Set a number of 'empty bar'
+empty_bar <- 5
+ 
+# Add lines to the initial dataset
+to_add <- matrix(NA, empty_bar, ncol(data))
+colnames(to_add) <- colnames(data)
+data <- rbind(data, to_add)
+data$id <- seq(1, nrow(data))
+
+# Get the name and the y position of each label
+label_data <- data
+number_of_bar <- nrow(label_data)
+angle <- 90 - 360 * (label_data$id-0.5) /number_of_bar     # I substract 0.5 because the letter must have the angle of the center of the bars. Not extreme right(1) or extreme left (0)
+label_data$hjust <- ifelse( angle < -90, 1, 0)
+label_data$angle <- ifelse(angle < -90, angle+180, angle)
+ 
+# Make the plot
+p <- ggplot(data, aes(x=as.factor(id), y=value)) +       # Note that id is a factor. If x is numeric, there is some space between the first bar
+  geom_bar(stat="identity", fill=alpha("green", 0.3)) +
+  ylim(-100,120) +
+  theme_minimal() +
+  theme(
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    plot.margin = unit(rep(-1,4), "cm") 
+  ) +
+  coord_polar(start = 0) + 
+  geom_text(data=label_data, aes(x=id, y=value+10, label=individual, hjust=hjust), color="black", fontface="bold",alpha=0.6, size=2.5, angle= label_data$angle, inherit.aes = FALSE ) 
+ 
+p
+
+```
+
+```{r}
+conn <- poolCheckout(db_pool)
+
+all_locations_timeseries <-
+  get_traffic(
+    group_by = c(
+      "location",
+      "postcode",
+      "location_id",
+      "locality",
+      "location_description" ,
+      "week_start_date",
+      "hour_group"
+    ), conn = conn
+  ) %>%
+  data.frame()
+
+
+poolReturn(conn)
+
+gg <-
+  all_traffic_timeseries %>%
+  # mutate(date = cut(date, "week")) %>%
+  group_by(date,hour_group) %>%
+  summarise(count = sum(count),
+            day_count = sum(day_count),
+            avg_daily_count = count / day_count ) %>%
+ggplot(
+    aes(
+      x = date,
+      y = avg_daily_count,
+      group = hour_group,
+      
+      # colour = hour_group,
+      fill = hour_group,
+      tooltip = hour_group,
+      data_id = hour_group,
+      hover_css = "fill:none;",
+    )
+  ) +
+    labs(
+      title = "Daily Average Traffic Volume By Week & Hour",
+      subtitle = waiver(),
+      caption = waiver(),
+      tag = waiver(),
+      fill = "Hour"
+    ) +
+  ylab("Traffic Volume") +
+  xlab("Week Start Date") +
+  geom_area_interactive(alpha=0.6 , size=.5, colour="white") +
+    scale_fill_viridis(discrete = T) +
+    scale_y_continuous( labels = comma) +
+    theme_ipsum() +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      axis.title.x = element_text( hjust = 0.5, size=18),
+      axis.title.y = element_text( hjust = 0.5, size=18),
+      axis.text.x = element_text(angle = 60, hjust = 1, size = 12),
+      axis.text.y = element_text(hjust = 1, size = 12)
+      # axis.title=element_text(size=24,face="bold")
+      )
+
+  x <- girafe(ggobj = gg, width = 8)
+  x <- girafe_options(x = x,
+                      opts_hover(css = "fill:orange"))
+  if (interactive())
+    print(x)
+
+```
+
+```{r}
+gg <-
+  all_traffic_timeseries %>%
+  # mutate(date = cut(date, "week")) %>%
+  group_by(date,hour_group) %>%
+  summarise(count = sum(count),
+            day_count = sum(day_count),
+            avg_daily_count = count / day_count ) %>%
+ggplot(
+    aes(
+      x = date,
+      y = avg_daily_count,
+      group = hour_group,
+      
+      # colour = hour_group,
+      fill = hour_group,
+      tooltip = hour_group,
+      data_id = hour_group,
+      hover_css = "fill:none;",
+    )
+  ) +
+    labs(
+      title = "Daily Average Traffic Volume By Week & Hour",
+      subtitle = waiver(),
+      caption = waiver(),
+      tag = waiver(),
+      fill = "Hour"
+    ) +
+  ylab("Traffic Volume") +
+  xlab("Week Start Date") +
+  geom_area_interactive(alpha=0.6 , size=.5, colour="white") +
+    scale_fill_viridis(discrete = T) +
+    scale_y_continuous( labels = comma) +
+    theme_ipsum() +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      axis.title.x = element_text( hjust = 0.5, size=18),
+      axis.title.y = element_text( hjust = 0.5, size=18),
+      axis.text.x = element_text(angle = 60, hjust = 1, size = 12),
+      axis.text.y = element_text(hjust = 1, size = 12)
+      # axis.title=element_text(size=24,face="bold")
+      )
+
+  x <- girafe(ggobj = gg, width = 8)
+  x <- girafe_options(x = x,
+                      opts_hover(css = "fill:orange"))
+  if (interactive())
+    print(x)
+
+```
+
