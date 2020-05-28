@@ -1,1 +1,1 @@
-x,config,shiny,shinycssloaders,shinyjs,shinyWidgets,stringr,scales,waiter,dplyr,readxl,data.table,geojsonio,sf,RMySQL,DBI,pool,mongolite,here,ggplot2,ggiraph,ggiraphExtra,RColorBrewer,viridis,hrbrthemes,lattice,leaflet,
+x,config,shiny,shinycssloaders,shinyjs,shinyWidgets,stringr,scales,waiter,lubridate,dplyr,readxl,data.table,geojsonio,sf,RMySQL,DBI,pool,mongolite,here,ggplot2,ggiraph,ggiraphExtra,RColorBrewer,viridis,hrbrthemes,lattice,leaflet,
