@@ -1,7 +1,6 @@
 #!/bin/bash 
 
 # Installs pacakges in ENV variable REQUIRED_PACKAGES and if DISCOVER_PACKAGES=true any packages refrenced in R code in $WWW_DIR
-
 if [ -z "${MRAN}" ];
 then
     [ -z "$BUILD_DATE" ] && BUILD_DATE=$(TZ="America/Los_Angeles" date -I) || true \
@@ -11,13 +10,23 @@ then
 fi
 
 echo "Installing R packages using repository: $MRAN"
+echo "REQUIRED_PACKAGES: $REQUIRED_PACKAGES"
+echo "REQUIRED_PACKAGES_PLUS: $REQUIRED_PACKAGES_PLUS"
+if [ -f "${LIB_DIR}/default_install_packages.csv" ];
+then
+  echo "Packages from default_install_packages.csv: `cat ${LIB_DIR}/default_install_packages.csv`"
+fi
+
+## Old version required for Azure
+apt-get update -qq && apt-get -y install libsasl2-dev
+Rscript -e "install.packages('mongolite', repos = 'https://cran.microsoft.com/snapshot/2018-08-01')"
 
 if [ "$DISCOVER_PACKAGES" = "true" ] || [ "$DISCOVER_PACKAGES" = "TRUE" ] || [ "$DISCOVER_PACKAGES" = "1" ];
 then
     # install packages specified by /etc/shiny-server/default_install_packages.csv or REQUIRED_PACKAGES
     # or those discovered  by a scan of files in $WWW_DIR looking for library('packagename') entries
-	Rscript -e "source('${LIB_DIR}/install_discovered_packages.R'); discover_and_install(default_packages_csv = '/etc/shiny-server/default_install_packages.csv', discovery_directory_root = '$WWW_DIR', discovery = TRUE,repos='$MRAN');"
+	Rscript -e "source('${LIB_DIR}/install_discovered_packages.R'); discover_and_install(default_packages_csv = '${LIB_DIR}/default_install_packages.csv', discovery_directory_root = '$WWW_DIR', discovery = TRUE,repos='$MRAN');"
 else
     # install packages specified by /etc/shiny-server/default_install_packages.csv or REQUIRED_PACKAGES
-	Rscript -e "source('${LIB_DIR}/install_discovered_packages.R'); discover_and_install(default_packages_csv = '/etc/shiny-server/default_install_packages.csv', discovery_directory_root = '$WWW_DIR', discovery = FALSE,repos='$MRAN');"
+	Rscript -e "source('${LIB_DIR}/install_discovered_packages.R'); discover_and_install(default_packages_csv = '${LIB_DIR}/default_install_packages.csv', discovery_directory_root = '$WWW_DIR', discovery = FALSE,repos='$MRAN');"
 fi

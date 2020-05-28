@@ -10,10 +10,11 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        SOURCE_TAG: "3.6.3"
-        SOURCE_IMAGE: "artificiallyintelligent/shiny_heavy"
-        DEPENDENCY_INSTALL: ALL
-        REQUIRED_PACKAGES_PLUS: "config,shiny,shinycssloaders,shinyjs,shinyWidgets,stringr,scales,waiter,dplyr,readxl,data.table,geojsonio,sf,RMySQL,DBI,pool,mongolite,here,ggplot2,ggiraph,ggiraphExtra,RColorBrewer,viridis,hrbrthemes,lattice,leaflet"
+        SRC_TAG: "3.6.3"
+        SRC_IMAGE: "artificiallyintelligent/shiny_heavy"
+        DISCOVERY: "FALSE"
+        PACKAGES: "config,shiny,shinycssloaders,shinyjs,shinyWidgets,stringr,scales,waiter,dplyr,readxl,data.table,geojsonio,sf,RMySQL,DBI,pool,mongolite,here,ggplot2,ggiraph,ggiraphExtra,RColorBrewer,viridis,hrbrthemes,lattice,leaflet"
+        DEPENDENCY: "ALL"
     restart: always
     # Setting this to something other than 'root' will cause shiny apps not to
     # run on the localhost:80 "Welcome to Shiny" diagnostics page mentioned
@@ -22,7 +23,8 @@ services:
     # Uncomment the lines below to disable application logs STDOUT output
     environment:
       - R_CONFIG_FILE=/usr/local/lib/shiny-server/config_mount/config.yaml
-      - DISCOVER_PACKAGES=TRUE
+      - DISCOVER_PACKAGES=FALSE
+      - DEPENDENCY_INSTALL=FALSE
       - SHINY_APP_IDLE_TIMEOUT=5
       - SHINY_APP_INIT_TIMEOUT=60
       - SHINY_GOOGLE_ANALYTICS_ID=

@@ -1,6 +1,5 @@
 #data retrival functions
 
-
 get_locations <- function(table = "traffic_location", conn) {
   
   traffic_locations <- pool::dbReadTable(conn, table) %>%
@@ -44,6 +43,13 @@ get_traffic <- function(group_by = c('location'), table = "traffic", conn) {
         hour < 24 ~ "18:00-24:00",
         TRUE ~ as.character(hour)
       )),
+      direction = factor(case_when(
+          direction == "N" ~ "North",
+          direction == "S" ~ "South",
+          direction == "E" ~ "East",
+          direction == "W" ~ "West",
+          TRUE ~ direction
+        )),
       total_count = sum(count),
       max_speed = max(sum_speed)
     ) %>%
