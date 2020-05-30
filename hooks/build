@@ -14,7 +14,7 @@ if [ -z "${SOURCE_REPO}" ]; then
 fi
 
 if [ -z "${SOURCE_IMAGE}" ]; then
-  SOURCE_IMAGE=rocker/shiny
+  SOURCE_IMAGE=artificiallyintelligent/shiny_lite
   echo "SOURCE_IMAGE not defined, using default value: $SOURCE_IMAGE"
 fi
 
