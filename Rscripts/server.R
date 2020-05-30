@@ -8,6 +8,10 @@ if (use_mongo){
   
   mgo_traffic_by_location_weekly <- mongo(db = "primary", collection = "traffic_by_location_weekly", url=azure$mongo_url)
   all_traffic_timeseries <- mgo_traffic_by_location_weekly$find()
+  
+  mgo_traffic_by_location_monthly <- mongo(db = "primary", collection = "traffic_by_location_monthly", url=azure$mongo_url)
+  all_traffic_monthly <- mgo_traffic_by_location_monthly$find()
+  
 }else{
   conn <- poolCheckout(db_pool)
   
@@ -32,8 +36,7 @@ if (use_mongo){
         "location_id",
         "locality",
         "location_description"
-      ), conn = conn
-    ) %>%
+      ), conn = conn) %>%
     data.frame()
   
   poolReturn(conn)
@@ -70,7 +73,7 @@ function(input, output, session) {
   }
   
   location_timeseries_data <- all_traffic_timeseries
-  
+  location_timeseries_monthly_data <- all_traffic_monthly
   # By ordering by centile, we ensure that the (comparatively rare) SuperZIPs
   # will be drawn last and thus be easier to see
   location_data <- location_data[order(location_data$count),]
@@ -118,59 +121,61 @@ function(input, output, session) {
            latitude >= latRng[1] & latitude <= latRng[2] &
              longitude >= lngRng[1] & longitude <= lngRng[2])
   })
+  
+  locationTimeseriesMonthlyInBounds <- reactive({
+    if (is.null(input$map_bounds))
+      return(location_data[FALSE,])
+    bounds <- input$map_bounds
+    latRng <- range(bounds$north, bounds$south)
+    lngRng <- range(bounds$east, bounds$west)
+    
+    subset(location_timeseries_monthly_data,
+           latitude >= latRng[1] & latitude <= latRng[2] &
+             longitude >= lngRng[1] & longitude <= lngRng[2])
+  })
+  
+  
   # Precalculate the breaks we'll need for the two histograms
   volumeBreaks <- hist(plot = FALSE, all_traffic$count, breaks = 20)$breaks
 
+  output$valueBox_volume <- renderValueBox({
+    count <- sum(locationsInBounds()$count)
+    label <- "Traffic Volume"
+    valueBox(
+      value = formatC(count, digits = 0, format = "f"),
+      subtitle = label,
+      icon = icon("bicycle")
+      # ,
+      # color = if (download_rate >= input$rateThreshold) "yellow" else "aqua"
+    )
+  })
+    
+  output$valueBox_speed <- renderValueBox({
+    speed <- sum(locationsInBounds()$total_speed) / sum(locationTimeseriesInBounds()$count)
+    label <- "Avg Speed Km/h"
+    valueBox(
+      value = formatC(speed, digits = 1, format = "f"),
+      subtitle = label,
+      icon = icon("tachometer")
+      # ,
+      # color = if (download_rate >= input$rateThreshold) "yellow" else "aqua"
+    )
+  })
+  
   output$area_VolumeByTime <- renderGirafe({
+    graphColorPallet <- input$graph_pallet
+    build_plot_weekly_volume_by_hour(locationTimeseriesInBounds())
+  })
+  
+  output$line_SpeedByTime <- renderGirafe({
+    graphColorPallet <- input$graph_pallet
+    build_plot_weekly_speed_by_hour(locationTimeseriesInBounds())
     
-    if (nrow(locationTimeseriesInBounds()) == 0)
-      return(NULL)
+  })
+  
+  output$summary.area_VolumeByTime <- renderGirafe({
     
-    gg <- locationTimeseriesInBounds() %>%
-      group_by(week_start_date,hour_group) %>%
-      summarise(count = sum(count),
-                day_count = sum(day_count),
-                avg_daily_count = count / day_count ) %>%
-      ggplot(
-        aes(
-          x = week_start_date,
-          y = avg_daily_count,
-          group = hour_group,
-          
-          # colour = hour_group,
-          fill = hour_group,
-          tooltip = hour_group,
-          data_id = hour_group,
-          hover_css = "fill:none;",
-        )
-      ) +
-      labs(
-        title = "Daily Average Traffic Volume By Week & Hour",
-        subtitle = waiver(),
-        caption = waiver(),
-        tag = waiver(),
-        fill = "Hour"
-      ) +
-      ylab("Traffic Volume") +
-      xlab("Week Start Date") +
-      geom_area_interactive(alpha=0.6 , size=.5, colour="white") +
-      scale_fill_viridis(discrete = T) +
-      scale_y_continuous( labels = comma) +
-      theme_ipsum() +
-      theme(
-        plot.title = element_text(hjust = 0.5),
-        axis.title.x = element_text( hjust = 0.5, size=18),
-        axis.title.y = element_text( hjust = 0.5, size=18),
-        axis.text.x = element_text(angle = 60, hjust = 1, size = 12),
-        axis.text.y = element_text(hjust = 1, size = 12)
-        # axis.title=element_text(size=24,face="bold")
-      )
-    
-    x <- girafe(ggobj = gg, width = 8)
-    x <- girafe_options(x = x,
-                        opts_hover(css = "fill:orange"))
-    if (interactive())
-      print(x)
+    build_plot_weekly_volume_by_hour( location_timeseries_data )
     
   })
   
@@ -216,17 +221,17 @@ function(input, output, session) {
   observe({
     colorBy <- input$color
     sizeBy <- input$size
-    colorPallet <- input$pallet
+    mapColorPallet <- input$map_pallet
 
     if (colorBy == "location") {
       # Color and palette are treated specially in the "superzip" case, because
       # the values are categorical instead of continuous.
      # colorData <- ifelse(location_data$postcode >= (100 - input$threshold), "yes", "no")
       colorData <- location_data$location
-      pal <- colorFactor(colorPallet, colorData)
+      pal <- colorFactor(mapColorPallet, colorData)
     } else {
       colorData <- location_data[[colorBy]]
-      pal <- colorBin(colorPallet, colorData, 7, pretty = FALSE)
+      pal <- colorBin(mapColorPallet, colorData, 7, pretty = FALSE)
     }
 
     if (sizeBy == "location") {
@@ -238,15 +243,15 @@ function(input, output, session) {
     
     leafletProxy("map", data = location_data) %>%
       clearShapes() %>%
-      addCircles(~longitude, ~latitude, radius=radius, layerId=~location,
+      addCircles(~longitude, ~latitude, radius=radius, layerId=~location_id,
         stroke=FALSE, fillOpacity=0.4, fillColor=pal(colorData)) %>%
       addLegend("bottomleft", pal=pal, values=colorData, title=colorBy,
         layerId="colorLegend")
   })
 
   # Show a popup at the given location
-  showLocationPopup <- function(location, lat, lng) {
-    selected_location <- all_traffic[all_traffic$location == location,]
+  showLocationPopup <- function(location_id, lat, lng) {
+    selected_location <- all_traffic[all_traffic$location_id == location_id,]
     content <- as.character(tagList(
       tags$h5(HTML(sprintf("%s - %s",
                            selected_location$locality,  selected_location$location_description
@@ -259,7 +264,7 @@ function(input, output, session) {
       # sprintf("Percent of adults with BA: %s%%", as.integer(selected_location$college)), tags$br(),
       # sprintf("Adult population: %s", selected_location$adultpop)
     ))
-    leafletProxy("map") %>% addPopups(lng, lat, content, layerId = location)
+    leafletProxy("map") %>% addPopups(lng, lat, content, layerId = location_id)
   }
 
   # When map is clicked, show a popup with city info

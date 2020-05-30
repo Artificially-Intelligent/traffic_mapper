@@ -4,6 +4,20 @@ conn <- poolCheckout(db_pool)
 
 traffic_locations <- get_locations(conn = conn)
 
+traffic_by_location_monthly <-
+  get_traffic(
+    group_by = c(
+      "location",
+      "postcode",
+      "location_id",
+      "locality",
+      "location_description" ,
+      "month",
+      "hour_group"
+    ), conn = conn
+  ) %>%
+  data.frame()
+
 traffic_by_location_weekly <-
   get_traffic(
     group_by = c(
@@ -52,3 +66,7 @@ mgo_traffic_by_location_weekly <- mongo(db = "primary", collection = "traffic_by
 mgo_traffic_by_location_weekly$drop()
 mgo_traffic_by_location_weekly$insert(traffic_by_location_weekly)
 
+traffic_by_location_monthly <- all_traffic_timeseries[! is.na(traffic_by_location_monthly$location),]
+mgo_traffic_by_location_monthly <- mongo(db = "primary", collection = "traffic_by_location_monthly", url=azure$mongo_url)
+mgo_traffic_by_location_monthly$drop()
+mgo_traffic_by_location_monthly$insert(traffic_by_location_monthly)

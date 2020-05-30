@@ -82,7 +82,12 @@ custom_version_required <- c('mongolite')
 
 additional_packages <- packages_required[!(packages_required %in% c(custom_version_required, installed.packages()[,"Package"]))]
 
+if(! 'mongolite' %in% c(custom_version_required, installed.packages()[,"Package"])) install.packages("mongolite", repos = "https://cran.microsoft.com/snapshot/2018-08-01")
+
 if(length(additional_packages) >0)
   install.packages(additional_packages, repos='http://cran.rstudio.com/', dependencies = TRUE)
 
+install.packages('ggiraph')
+
+Sys.getenv(PKG_CONFIG_PATH)
 

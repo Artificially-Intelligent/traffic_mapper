@@ -603,25 +603,9 @@ https://rpubs.com/cardiomoon/398623
 ```{r}
 conn <- poolCheckout(db_pool)
 
-bike_traffic <- get_traffic(conn=conn, group_by = c('direction', "hour_group")) %>% as.data.frame() %>%
-  
-    mutate(hour_group = as.factor(hour_group))
-summary(bike_traffic)
+bike_traffic <- get_traffic(conn=conn, group_by = c('direction', "hour_group")) %>% as.data.frame()
 poolReturn(conn)
 
-bike_traffic %>%
-  mutate(
-    
-    direction = as.factor(
-      case_when(
-        direction == "N" ~ "North",
-        direction == "S" ~ "South",
-        direction == "E" ~ "East",
-        direction == "W" ~ "West",
-        TRUE ~ direction
-      )
-      , levels = c("N", "S","E","W")
-))
 
 
 ggPieDonut(bike_traffic,aes(pies="direction",donuts="direction",count="hour_group"),interactive=TRUE)
@@ -771,19 +755,20 @@ ggplot(
 ```
 
 ```{r}
-gg <-
+gg_data <-
   all_traffic_timeseries %>%
   # mutate(date = cut(date, "week")) %>%
-  group_by(week_start_date,hour_group) %>%
+  group_by(direction,lane,hour_group) %>%
   summarise(count = sum(count),
+            avg_speed = sum(sum_speed)/count,
             day_count = sum(day_count),
-            avg_daily_count = count / day_count ) %>%
+            avg_daily_count = count / day_count )
 
-  
+  gg_data %>%
   ggPieDonut(
   aes(
-    pies = "week_start_date",
-      donuts = "hour_group",
+    pies = "direction",
+      donuts = "lane",
     count = "count")
   ,
   interactive = TRUE,

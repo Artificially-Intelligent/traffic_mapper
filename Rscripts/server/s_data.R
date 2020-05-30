@@ -33,6 +33,7 @@ get_traffic <- function(group_by = c('location'), table = "traffic", conn) {
       # date = format( round(datetime, '%Y-%m-%d')),
       date = as.Date(datetime),
       week_start_date = cut(date, "week"),
+      month = cut(date, "month"),
       time = format(datetime, '%H:%M:%S'),
       hour = as.numeric(format(datetime, format = "%H")),
       hour_group = factor(case_when(
@@ -51,7 +52,8 @@ get_traffic <- function(group_by = c('location'), table = "traffic", conn) {
           TRUE ~ direction
         )),
       total_count = sum(count),
-      max_speed = max(sum_speed)
+      max_speed = max(sum_speed),
+      speed_group = bin(sum_speed / count, nbins = 7)
     ) %>%
     group_by_at(group_by) %>%
     summarise(

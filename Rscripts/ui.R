@@ -56,8 +56,7 @@ navbarPage(
         width = 330,
         height = "auto",
         
-        h2("Traffic Breakdown"),
-        selectInput("pallet", "Pallet", pallet_vars, selected = "YlOrRd"),
+        h3("Traffic Summary"),
         selectInput("color", "Color", vars),
         selectInput("size", "Size", vars, selected = "count"),
         # conditionalPanel("input.color == 'count' || input.size == 'count'",
@@ -65,8 +64,13 @@ navbarPage(
         #   numericInput("threshold", "Volume threshold (> n % of total)", 2)
         # ),
         
-        girafeOutput("area_VolumeByTime", height = 200),
-        plotOutput("scatterCollegeIncome", height = 250)
+        
+        valueBoxOutput(width = 6,"valueBox_speed"),
+        valueBoxOutput(width = 6,"valueBox_volume"),
+        girafeOutput("area_VolumeByTime", height = 200)
+        
+        # ,
+        # girafeOutput("line_SpeedByTime", height = 200)
       ),
       
       tags$div(
@@ -78,6 +82,48 @@ navbarPage(
     )
   ),
   
+  # tabPanel(
+  #   "Summary",
+  #   fluidRow(
+  #     column(
+  #     3,
+  #     selectInput("summary.suburb", "Suburbs", c(
+  #       "All Suburbs" = "", unique(traffic_locations$locality)
+  #     ), multiple = TRUE)
+  #   )
+  #   ,
+  #   column(
+  #     3,
+  #     conditionalPanel(
+  #       "input.summary.suburb",
+  #       selectInput(
+  #         "summary.location_description",
+  #         "Measurement Location",
+  #         c("All locations" = "", (traffic_locations$location_description)),
+  #         multiple = TRUE
+  #       )
+  #     )
+  #   ),
+  #   # column(3,
+  #   #   conditionalPanel("input.states",
+  #   #     selectInput("zipcodes", "Zipcodes", c("All zipcodes"=""), multiple=TRUE)
+  #   #   )
+  #   # )
+  #   
+  #   ),
+  #   
+  #   hr(),
+  #   fluidRow(
+  #     column(width = 6,
+  #            girafeOutput("summary.area_VolumeByTime")
+  #            ),
+  #     column(width =  6)
+  #   ),
+  #   fluidRow(
+  #     column(width =  6),
+  #     column(width =  6)
+  #   ) 
+  # ),
   tabPanel(
     "Data explorer",
     fluidRow(column(
@@ -90,7 +136,7 @@ navbarPage(
     column(
       3,
       conditionalPanel(
-        "input.location_description",
+        "input.suburb",
         selectInput(
           "location_description",
           "Measurement Location",
@@ -117,5 +163,11 @@ navbarPage(
     ),
     
     conditionalPanel("false", icon("crosshair"))
+  ),
+  tabPanel("Settings",
+           fluidRow(column(3,selectInput("map_pallet", "Map Colour Pallet", pallet_vars, selected = "YlOrRd") ))
+           # ,
+           # fluidRow(column(3,selectInput("graph_pallet", "Graph Colour Pallet", pallet_vars, selected = "YlOrRd") ))
   )
+  
 )
