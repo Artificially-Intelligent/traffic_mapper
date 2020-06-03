@@ -10,11 +10,12 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        SRC_TAG: "3.6.3"
+        SRC_TAG: "traffic_mapper"
         SRC_IMAGE: "artificiallyintelligent/shiny_lite"
-        DISCOVERY: "FALSE"
-        PACKAGES: "config,shiny,shinycssloaders,shinyjs,shinyWidgets,stringr,scales,waiter,dplyr,data.table,geojson,mongolite,ggplot2,ggiraph,ggiraphExtra,RColorBrewer,viridis,hrbrthemes,lattice,leaflet,units"
-        DEPENDENCY: "ALL"
+        DISCOVERY: "TRUE"
+        PROJECT_PACKAGES: "config,shiny,shinycssloaders,shinyjs,shinyWidgets,stringr,scales,waiter,dplyr,data.table,geojson,mongolite,ggplot2,ggiraph,ggiraphExtra,RColorBrewer,viridis,hrbrthemes,lattice,leaflet,units"
+        PROJECT_PACKAGES_PLUS: 
+        DEPENDENCY: 
     restart: always
     # Setting this to something other than 'root' will cause shiny apps not to
     # run on the localhost:80 "Welcome to Shiny" diagnostics page mentioned
@@ -40,6 +41,5 @@ services:
       # Shiny Server!" diagnostics page.
       # - './mountpoints/apps:/srv/shiny-server'
       # - ./mountpoints/apps:/etc/cont-init.d
-      - 'C:/Users/Stuart/GitHub/traffic_mapper/Rscripts/conf:/usr/local/lib/shiny-server/config_mount'
 volumes:
   shiny_logs:
