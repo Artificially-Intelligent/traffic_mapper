@@ -57,8 +57,14 @@ navbarPage(
         height = "auto",
         
         h3("Traffic Summary"),
-        column(6,selectInput("color", "Color", vars)),
-        column(6,selectInput("size", "Size", vars, selected = "count")),
+        fluidRow(column(6,selectInput("color", "Color", vars),
+                        tags$head(tags$style(HTML(".selectize-input {height: 50px; width: 130px; }")))
+                        
+                        ),
+        column(6,selectInput("size", "Size", vars, selected = "count"),
+               tags$head(tags$style(HTML(".selectize-input {height: 50px; width: 130px; }")))
+               
+               )),
         # checkboxInput("legend", "Show legend", TRUE),
         
         # conditionalPanel("input.color == 'count' || input.size == 'count'",
@@ -68,8 +74,8 @@ navbarPage(
         
         
         fluidRow(
-          valueBoxOutput(width = 6, "valueBox_speed"),
-          valueBoxOutput(width = 6, "valueBox_volume")
+          column(6,valueBoxOutput( width = 6,"valueBox_speed")),
+          column(6,valueBoxOutput( width = 6,"valueBox_volume"))
         ),
         fluidRow(plotlyOutput("lollipop_VolumeChangeByTime", height = 200)),
         fluidRow(plotlyOutput("histogram_SpeedDistrubution", height = 160))

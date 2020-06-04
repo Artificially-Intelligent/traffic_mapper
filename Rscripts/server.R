@@ -150,8 +150,9 @@ function(input, output, session) {
     label <- "Traffic Volume"
     valueBox(
       value = formatC(count, digits = 0, format = "f"),
-      subtitle = label,
-      icon = icon("bicycle")
+      subtitle = label
+      # ,
+      # icon = icon("bicycle")
       # ,
       # color = if (download_rate >= input$rateThreshold) "yellow" else "aqua"
     )
@@ -160,11 +161,12 @@ function(input, output, session) {
   output$valueBox_speed <- renderValueBox({
     speed <-
       sum(locationsInBounds()$total_speed) / sum(weeklyLocationInBounds()$count)
-    label <- "Avg Speed Km/h"
+    label <- "Average Speed(Km/h)"
     valueBox(
       value = formatC(speed, digits = 1, format = "f"),
-      subtitle = label,
-      icon = icon("tachometer")
+      subtitle = label
+      # ,
+      # icon = icon("tachometer")
       # ,
       # color = if (download_rate >= input$rateThreshold) "yellow" else "aqua"
     )
