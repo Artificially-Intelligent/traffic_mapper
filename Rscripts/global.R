@@ -1,3 +1,6 @@
+# Add cutom version of mongolite if missing
+if(! 'mongolite' %in% c( installed.packages()[,'Package'])) install.packages('mongolite', repos = 'https://cran.microsoft.com/snapshot/2018-08-01')
+
 suppressPackageStartupMessages({
 # Setup Packages
     library(config)
