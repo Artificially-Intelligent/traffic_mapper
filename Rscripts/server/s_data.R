@@ -11,8 +11,8 @@ get_locations <- function(table = "traffic_location", conn) {
 }
 
 get_traffic <- function(group_by = c('location'), table = "traffic", conn) {
-  DBI::dbReadTable(conn)
-  aggregated_traffic <- DBI::dbReadTable(conn = conn, table = table) %>%
+ 
+  aggregated_traffic <- pool::dbReadTable(conn, table) %>%
     filter(postcode < 3900 & postcode >= 3000 ) %>%
     mutate(
       datetime = as.POSIXct(datetime),

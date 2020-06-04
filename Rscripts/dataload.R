@@ -34,7 +34,7 @@ for(i in 1:length(trafficdata_source_uri)){
   if(i > 1)
     full_db_reload = FALSE
   load_traffic_to_db(
-    table = table_name,
+    db_table = table_name,
     full_db_reload = full_db_reload,
     trafficdata_source_uri = trafficdata_source_uri[i]
   )
@@ -42,4 +42,4 @@ for(i in 1:length(trafficdata_source_uri)){
 
 #Aggregate traffic data and upload to cosmos DB
 source("dataload/d_load_to_cosmos.R")
-reload_cosmos_db(table = table_name) 
+reload_cosmos_db(db_table = table_name) 

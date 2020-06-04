@@ -1,7 +1,7 @@
 #Load traffic data and merge with traffic_location for DB, write result to DB
 
 load_traffic_to_db <-
-  function(table = "traffic",
+  function(db_table = "traffic",
            full_db_reload = TRUE,
            trafficdata_source_uri =  paste(
              "https://vicroadsopendatastorehouse.vicroads.vic.gov.au/opendata/Traffic_Measurement/Bicycle_Volume_and_Speed/Bicycle_Volume_Speed_",
@@ -14,7 +14,7 @@ load_traffic_to_db <-
     if (!full_db_reload) {
       conn <- poolCheckout(db_pool)
       meta_traffic <-
-        dbReadTable(conn, paste("meta_", table, sep = ""))
+        dbReadTable(conn, paste("meta_", db_table, sep = ""))
       poolReturn(conn)
     }
     
@@ -175,17 +175,17 @@ load_traffic_to_db <-
     dbBegin(conn)
     dbWriteTable(
       conn,
-      table,
+      db_table,
       bike_traffic,
       append = !full_db_reload,
       overwrite = full_db_reload,
       row.names = FALSE
     )
     dbSendQuery(conn,
-                paste("ALTER TABLE ", table, " MODIFY datetime datetime;"))
+                paste("ALTER TABLE ", db_table, " MODIFY datetime datetime;"))
     dbWriteTable(
       conn,
-      paste("meta_", table, sep = ""),
+      paste("meta_", db_table, sep = ""),
       sourcefiles,
       append = !full_db_reload,
       overwrite = full_db_reload,

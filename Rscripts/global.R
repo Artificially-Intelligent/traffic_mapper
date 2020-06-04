@@ -24,7 +24,7 @@ suppressPackageStartupMessages({
   
   
 #DB Packages
-  library(RMySQL)
+  library(RMariaDB)
   library(DBI)
   library(pool)
   library(mongolite)
@@ -58,7 +58,7 @@ azure <- config$azure_primary
 use_mongo = TRUE
 
 db_pool <- pool::dbPool(
-  drv = RMySQL::MySQL(),
+  drv = RMariaDB::MariaDB(),
   host = dw$server,
   dbname = dw$database,
   user = dw$uid,
