@@ -32,7 +32,7 @@ build_plot_monthly_volume_by_hour <- function(plot_data, pallet = graphColorPall
   ) +
   ylab("Traffic Volume") +
   xlab("Month") +
-  geom_area_interactive(alpha=0.6 ) +
+  geom_area(alpha=0.6 ) +
   scale_fill_viridis(discrete = T) +
   scale_y_continuous( labels = comma) +
   theme_ipsum() +
@@ -78,9 +78,10 @@ build_plot_volume_change_by_date <- function(plot_data, pallet = graphColorPalle
     mutate(
       delta_count = count - lag(count),
       delta_speed = avg_speed - lag(avg_speed),
-      tooltip = paste( as.character(date),tags$br(),"Count:",count, tags$br(),"Change:", 100 * round(delta_count/count,2), "%" ),
+      # tooltip = paste( as.character(date),tags$br(),"Count:",count, tags$br(),"Change:", 100 * round(delta_count/count,2), "%" ),
       colour = case_when(delta_count >= 0 ~ 'increase',
-                         delta_count < 0 ~ 'decrease')
+                         delta_count < 0 ~ 'decrease'),
+      tooltip = paste( "Change:", 100 * round(delta_count/count,2), "%" )
     )  %>%
     filter( !is.na(colour) &  !is.na(date) & (as.Date(date) >= as.Date('2019-01-01')))
   
@@ -91,7 +92,7 @@ build_plot_volume_change_by_date <- function(plot_data, pallet = graphColorPalle
       x = date,
       y = delta_count,
       tooltip = tooltip,
-      data_id = tooltip
+      # data_id = date
       # ,
       # hover_css = "fill:none;"
     )
@@ -103,7 +104,7 @@ build_plot_volume_change_by_date <- function(plot_data, pallet = graphColorPalle
       yend = delta_count
     ),
     color = "grey") +
-    geom_point_interactive(aes(color = colour), size = 10) +
+    geom_point(aes(color = colour), size = 2) +
     # geom_smooth(method = "lm") + 
     theme_light() +
     theme(
@@ -116,15 +117,16 @@ build_plot_volume_change_by_date <- function(plot_data, pallet = graphColorPalle
     scale_fill_viridis(discrete = T) +
     scale_y_continuous(labels = comma) +
     theme(
+      legend.position = "none",
       plot.title = element_text(hjust = 0.5),
-      axis.title.x = element_text(hjust = 0.5, size = 18),
-      axis.title.y = element_text(hjust = 0.5, size = 18),
+      axis.title.x = element_text(hjust = 0.5, size = 9),
+      axis.title.y = element_text(hjust = 0.5, size = 9),
       axis.text.x = element_text(
         angle = 60,
         hjust = 1,
-        size = 16
+        size = 7
       ),
-      axis.text.y = element_text(hjust = 1, size = 16)
+      axis.text.y = element_text(hjust = 1, size = 7)
       # axis.title=element_text(size=24,face="bold")
     )
   
@@ -144,10 +146,11 @@ build_plot_speed_histogram <- function(plot_data, pallet = graphColorPallet){
   p_data <- plot_data   %>%
     filter( !is.na(speed_group) ) %>%
     group_by(speed_group) %>%
-    summarise(count = as.numeric(sum(count))) %>%
-    mutate(
-      tooltip = paste( speed_group , "KM/H",tags$br(),"Count:",count )
-    ) 
+    summarise(count = as.numeric(sum(count))) 
+  # %>%
+  #   mutate(
+  #     tooltip = paste( speed_group , "KM/H",tags$br(),"Count:",count )
+  #   ) 
   
   
   
@@ -155,15 +158,15 @@ build_plot_speed_histogram <- function(plot_data, pallet = graphColorPallet){
                  aes(
                    x = speed_group,
                    y = count,
-                   group = speed_group,
+                   # group = speed_group,
                    fill = speed_group,
-                   tooltip = tooltip,
-                   data_id = tooltip
+                   # tooltip = tooltip,
+                   # data_id = speed_group
                    # ,
                    # hover_css = "fill:none;"
                  )
   ) +
-    geom_bar_interactive(stat = "identity") +
+    geom_bar(stat = "identity") +
     theme_light() +
     theme(
       panel.grid.major.x = element_blank(),
@@ -175,15 +178,16 @@ build_plot_speed_histogram <- function(plot_data, pallet = graphColorPallet){
     scale_fill_viridis(discrete = T) +
     scale_y_continuous(labels = comma) +
     theme(
+      legend.position = "none",
       plot.title = element_text(hjust = 0.5),
-      axis.title.x = element_text(hjust = 0.5, size = 18),
-      axis.title.y = element_text(hjust = 0.5, size = 18),
+      axis.title.x = element_text(hjust = 0.5, size = 9),
+      axis.title.y = element_text(hjust = 0.5, size = 9),
       axis.text.x = element_text(
         angle = 60,
         hjust = 1,
-        size = 16
+        size = 7
       ),
-      axis.text.y = element_text(hjust = 1, size = 16)
+      axis.text.y = element_text(hjust = 1, size = 7)
       # axis.title=element_text(size=24,face="bold")
     )
   return(gg)
@@ -236,7 +240,7 @@ build_plot_weekly_speed_by_hour <- function(plot_data){
     ) +
     ylab("KM/H") +
     xlab("Date") +
-    geom_line_interactive(size=1) +
+    geom_line(size=1) +
     scale_fill_viridis(discrete = T) +
     scale_y_continuous( labels = comma) +
     # theme_ipsum()
@@ -247,7 +251,7 @@ build_plot_weekly_speed_by_hour <- function(plot_data){
     # #   plot.title = element_text(hjust = 0.5),
     # #   # axis.title.x = element_text( hjust = 0.5, size=18),
     # #   axis.title.y = element_text( hjust = 0.5, size=18),
-      axis.text.x = element_text(angle = 60, hjust = 1, size = 12)
+      axis.text.x = element_text(angle = 60, hjust = 1, size = 8)
     #   # ,
     # #   axis.text.y = element_text(hjust = 1, size = 12)
     #   # axis.title=element_text(size=24,face="bold")

@@ -67,11 +67,12 @@ navbarPage(
         # ),
         
         
-        valueBoxOutput(width = 6,"valueBox_speed"),
-        valueBoxOutput(width = 6,"valueBox_volume"),
-        plotlyOutput("lollipop_VolumeChangeByTime", height = 160),
-        plotlyOutput("histogram_SpeedDistrubution", height = 160)
-        
+        fluidRow(
+          valueBoxOutput(width = 6, "valueBox_speed"),
+          valueBoxOutput(width = 6, "valueBox_volume")
+        ),
+        fluidRow(plotlyOutput("lollipop_VolumeChangeByTime", height = 200)),
+        fluidRow(plotlyOutput("histogram_SpeedDistrubution", height = 160))
         
         # ,
         # girafeOutput("line_SpeedByTime", height = 200)
