@@ -45,6 +45,8 @@ RUN ${SCRIPTS_DIR}/cont-init.d-defaults/04_expand_packages_dependencies.sh \
 
 ENV INSTALL_PACKAGE_AT_RUNTIME=FALSE
 
+ADD shiny-server/cont-init.d-defaults $SCRIPTS_DIR/cont-init.d-defaults
+
 ## start shiny server
 RUN ln -f ${SCRIPTS_DIR}/shiny-server.sh /usr/bin/shiny-server.sh \
 	&& chmod +x /usr/bin/shiny-server.sh
