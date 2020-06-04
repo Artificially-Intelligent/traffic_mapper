@@ -45,9 +45,6 @@ RUN ${SCRIPTS_DIR}/cont-init.d-defaults/04_expand_packages_dependencies.sh \
 
 ENV INSTALL_PACKAGE_AT_RUNTIME=FALSE
 
-# Temporary overwrite of start script, remove later
-ADD  shiny-server/shiny-server.sh  ${SCRIPTS_DIR}/shiny-server.sh
-
 ## start shiny server
 RUN ln -f ${SCRIPTS_DIR}/shiny-server.sh /usr/bin/shiny-server.sh \
 	&& chmod +x /usr/bin/shiny-server.sh
