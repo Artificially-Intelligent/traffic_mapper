@@ -81,11 +81,11 @@ build_plot_volume_change_by_date <- function(plot_data, pallet = graphColorPalle
       colour = case_when(delta_count >= 0 ~ 'increase',
                          delta_count < 0 ~ 'decrease')
     )  %>%
-    filter( !is.na(colour) ) 
+    filter( !is.na(colour) &  !is.na(date) & (as.Date(date) >= as.Date('2019-01-01')))
   
 
   
- gg <-  ggplot( data = p_data,
+ gg <-  ggplot( data = p_data[2:nrow(p_data),],
     aes(
       x = date,
       y = delta_count,
@@ -102,7 +102,7 @@ build_plot_volume_change_by_date <- function(plot_data, pallet = graphColorPalle
       yend = delta_count
     ),
     color = "grey") +
-    geom_point_interactive(aes(color = colour), size = 8) +
+    geom_point_interactive(aes(color = colour), size = 10) +
     # geom_smooth(method = "lm") + 
     theme_light() +
     theme(
@@ -127,12 +127,71 @@ build_plot_volume_change_by_date <- function(plot_data, pallet = graphColorPalle
       # axis.title=element_text(size=24,face="bold")
     )
   
-  x <- girafe(ggobj = gg, width = 8)
+  x <- girafe(ggobj = gg, width = 8, height = 6 )
   x <- girafe_options(x = x)
   if (interactive())
     print(x)
 }
 
+
+build_plot_speed_histogram <- function(plot_data, pallet = graphColorPallet){
+  
+  if (nrow(plot_data) == 0)
+    return(NULL)
+  
+  plot_data <- traffic_by_location_monthly
+  
+  p_data <- plot_data   %>%
+    filter( !is.na(speed_group) ) %>%
+    group_by(speed_group) %>%
+    summarise(count = as.numeric(sum(count))) %>%
+    mutate(
+      tooltip = paste( speed_group , "KM/H",tags$br(),"Count:",count )
+    ) 
+  
+  
+  
+   gg <- ggplot( data = p_data,
+                 aes(
+                   x = speed_group,
+                   y = count,
+                   group = speed_group,
+                   fill = speed_group,
+                   tooltip = tooltip,
+                   data_id = tooltip
+                   # ,
+                   # hover_css = "fill:none;"
+                 )
+  ) +
+    geom_bar_interactive(stat = "identity") +
+    theme_light() +
+    theme(
+      panel.grid.major.x = element_blank(),
+      panel.border = element_blank(),
+      axis.ticks.x = element_blank()
+    ) +
+    xlab("Speed KM/H") +
+    ylab("Traffic Volume") +
+    scale_fill_viridis(discrete = T) +
+    scale_y_continuous(labels = comma) +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      axis.title.x = element_text(hjust = 0.5, size = 18),
+      axis.title.y = element_text(hjust = 0.5, size = 18),
+      axis.text.x = element_text(
+        angle = 60,
+        hjust = 1,
+        size = 16
+      ),
+      axis.text.y = element_text(hjust = 1, size = 16)
+      # axis.title=element_text(size=24,face="bold")
+    )
+  
+  x <- girafe(ggobj = gg, width = 8, height = 3 )
+  x <- girafe_options(x = x)
+  if (interactive())
+    print(x)
+}
 
 build_plot_weekly_speed_by_hour <- function(plot_data){
   

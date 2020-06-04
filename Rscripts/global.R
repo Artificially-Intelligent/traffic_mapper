@@ -70,3 +70,5 @@ if (!use_mongo) {
     password = dw$pwd
   )
 }
+print("File list:")
+print(list.files(recursive = TRUE))

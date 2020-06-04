@@ -13,7 +13,7 @@ pallet_vars <- rownames(brewer.pal.info)
 if (use_mongo) {
   mgo_traffic_locations <-
     mongo(db = "primary",
-          collection = "traffic_locations",
+          collection = "traffic_by_location",
           url = azure$mongo_url)
   traffic_locations <- mgo_traffic_locations$find()
 } else{
@@ -57,8 +57,8 @@ navbarPage(
         height = "auto",
         
         h3("Traffic Summary"),
-        selectInput("color", "Color", vars),
-        selectInput("size", "Size", vars, selected = "count"),
+        column(6,selectInput("color", "Color", vars)),
+        column(6,selectInput("size", "Size", vars, selected = "count")),
         # checkboxInput("legend", "Show legend", TRUE),
         
         # conditionalPanel("input.color == 'count' || input.size == 'count'",
@@ -69,7 +69,9 @@ navbarPage(
         
         valueBoxOutput(width = 6,"valueBox_speed"),
         valueBoxOutput(width = 6,"valueBox_volume"),
-        girafeOutput("lollipop_VolumeChangeByTime", height = 200)
+        girafeOutput("lollipop_VolumeChangeByTime", height = 160),
+        girafeOutput("histogram_SpeedDistrubution", height = 160)
+        
         
         # ,
         # girafeOutput("line_SpeedByTime", height = 200)

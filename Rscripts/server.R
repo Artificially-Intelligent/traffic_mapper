@@ -9,19 +9,19 @@ if (use_mongo) {
           collection = "traffic_by_location",
           url = azure$mongo_url)
   traffic_by_location <- mgo_traffic_by_location$find()
-  
+
   mgo_traffic_by_location_weekly <-
     mongo(db = "primary",
           collection = "traffic_by_location_weekly",
           url = azure$mongo_url)
   traffic_by_location_weekly <- mgo_traffic_by_location_weekly$find()
-  
+
   mgo_traffic_by_location_monthly <-
     mongo(db = "primary",
           collection = "traffic_by_location_monthly",
           url = azure$mongo_url)
   traffic_by_location_monthly <- mgo_traffic_by_location_monthly$find()
-  
+
 } else{
   conn <- poolCheckout(db_pool)
   
@@ -187,6 +187,10 @@ function(input, output, session) {
     build_plot_volume_change_by_date(monthlyLocationInBounds())
   })
   
+  output$histogram_SpeedDistrubution <- renderGirafe({
+    graphColorPallet <- input$graph_pallet
+    build_plot_speed_histogram(monthlyLocationInBounds())
+  }) 
   
   
   output$summary.area_VolumeByTime <- renderGirafe({

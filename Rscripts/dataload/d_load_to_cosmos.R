@@ -35,7 +35,7 @@ reload_cosmos_db <- function(db_table = "traffic_new") {
   # Write location summary result to Cosmos DB
   
   traffic_by_location <-
-    all_traffic[!is.na(traffic_by_location$location), ]
+    traffic_by_location[!is.na(traffic_by_location$location), ]
   mgo_traffic_by_location <-
     mongo(db = "primary",
           collection = "traffic_by_location",
