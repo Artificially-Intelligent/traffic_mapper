@@ -4,7 +4,7 @@ build_plot_monthly_volume_by_hour <- function(plot_data, pallet = graphColorPall
   
   if (nrow(plot_data) == 0)
     return(NULL)
-  
+ 
   gg <- plot_data %>%
   group_by(month,hour_group) %>%
   summarise(count = sum(count),
@@ -54,29 +54,40 @@ build_plot_monthly_volume_by_hour <- function(plot_data, pallet = graphColorPall
     print(x)
 }
 
-build_plot_weekly_volume_change <- function(plot_data, pallet = graphColorPallet){
+build_plot_volume_change_by_date <- function(plot_data, pallet = graphColorPallet){
   
   if (nrow(plot_data) == 0)
     return(NULL)
   
+  date_column <- case_when('week_start_date' %in% colnames(plot_data) ~  'week_start_date',
+                           TRUE ~ 'month')
+  if(date_column == "week_start_date"){
+    plot_data$date <- plot_data$week_start_date
+  }
+  if(date_column == "month"){
+    plot_data$date <- plot_data$month
+  }
+  
   p_data <- plot_data  %>%
-    group_by(week_start_date) %>%
-    summarise(count = sum(count),
+    group_by(date) %>%
+    summarise(count = as.numeric(sum(count)),
               avg_speed = sum(total_speed)/count,
               day_count = sum(day_count),
               avg_daily_count = count / day_count ) %>%
     mutate(
       delta_count = count - lag(count),
       delta_speed = avg_speed - lag(avg_speed),
-      tooltip = paste(week_start_date, tags$br(),"Count:",count, tags$br(),"Change:", 100 * round(delta_count/count,2), "%" ),
+      tooltip = paste( as.character(date),tags$br(),"Count:",count, tags$br(),"Change:", 100 * round(delta_count/count,2), "%" ),
       colour = case_when(delta_count >= 0 ~ 'increase',
                          delta_count < 0 ~ 'decrease')
     )  %>%
-    filter( !is.na(colour) )
+    filter( !is.na(colour) ) 
   
-  gg <- ggplot( data = p_data,
+
+  
+ gg <-  ggplot( data = p_data,
     aes(
-      x = week_start_date,
+      x = date,
       y = delta_count,
       tooltip = tooltip,
       data_id = tooltip
@@ -85,8 +96,8 @@ build_plot_weekly_volume_change <- function(plot_data, pallet = graphColorPallet
     )
   ) +
     geom_segment(aes(
-      x = week_start_date,
-      xend = week_start_date,
+      x = date,
+      xend = date,
       y = 0,
       yend = delta_count
     ),
@@ -99,7 +110,7 @@ build_plot_weekly_volume_change <- function(plot_data, pallet = graphColorPallet
       panel.border = element_blank(),
       axis.ticks.x = element_blank()
     ) +
-    xlab("Week Start Date") +
+    xlab(make_clean_names( date_column , case = "title")) +
     ylab("Change in Traffic Volume") +
     scale_fill_viridis(discrete = T) +
     scale_y_continuous(labels = comma) +
@@ -134,7 +145,7 @@ build_plot_weekly_speed_by_hour <- function(plot_data){
   poolReturn(conn)
   
   # plot_data <- traffic_by_location_weekly %>%
-  #   group_by(week_start_date,hour_group) %>%
+  #   group_by(date,hour_group) %>%
   #   summarise(count = sum(count),
   #             day_count = sum(day_count),
   #             avg_speed = mean(avg_speed),

@@ -64,24 +64,75 @@ get_traffic <- function(group_by = c('location'), table = "traffic", conn) {
     ) %>%
     group_by_at(group_by) %>%
     summarise(
-      latitude = mean(lat),
-      longitude =  mean(long),
-      total_speed = sum(sum_speed),
-      count = sum(count),
-      count_pct = round(100 * count / mean(total_count) , digits = 1),
-      day_count = length(unique(date)),
-      avg_speed =  round(total_speed / count, digits = 1),
-      avg_speed_pct =  round(avg_speed /  max(max_speed), digits = 1),
-      avg_daily_count =  round(count / day_count, digits = 1),
-      avg_wheelbase = round( sum(sum_wheelbase) / count, digits = 1),
-      avg_headway =  round(sum(sum_headway) / count, digits = 1),
-      avg_gap = round(sum(sum_gap) / count, digits = 1),
-      avg_rho = round(sum(sum_rho) / count, digits = 1)
+      latitude = as.numeric(mean(lat)),
+      longitude =  as.numeric(mean(long)),
+      total_speed = as.numeric(sum(sum_speed)),
+      count = as.numeric(sum(count)),
+      count_pct = as.numeric(round(100 * count / mean(total_count) , digits = 1)),
+      day_count = as.numeric(length(unique(date))),
+      avg_speed =  as.numeric(round(total_speed / count, digits = 1)),
+      avg_speed_pct =  as.numeric(round(avg_speed /  max(max_speed), digits = 1)),
+      avg_daily_count =  as.numeric(round(count / day_count, digits = 1)),
+      avg_wheelbase = as.numeric(round( sum(sum_wheelbase) / count, digits = 1)),
+      avg_headway =  as.numeric(round(sum(sum_headway) / count, digits = 1)),
+      avg_gap = as.numeric(round(sum(sum_gap) / count, digits = 1)),
+      avg_rho = as.numeric(round(sum(sum_rho) / count, digits = 1))
     )
 
   return(aggregated_traffic)
 }
 
+get_traffic_by_location_monthly  <- function(db_table,conn) {
+  get_traffic(
+    table = db_table,
+    group_by = c(
+      "location",
+      "postcode",
+      "location_id",
+      "locality",
+      "location_description" ,
+      "month",
+      "hour_group",
+      "speed_group"
+    ),
+    conn = conn
+  ) %>%
+  data.frame()
+}
+
+
+get_traffic_by_location_weekly  <- function(db_table,conn) {
+  get_traffic(
+    table = db_table,
+    group_by = c(
+      "location",
+      "postcode",
+      "location_id",
+      "locality",
+      "location_description" ,
+      "week_start_date",
+      "hour_group",
+      "speed_group"
+    ),
+    conn = conn
+  ) %>%
+  data.frame()
+}
+
+get_traffic_by_location  <- function(db_table,conn) {
+  get_traffic(
+    table = db_table,
+    group_by = c(
+      "location",
+      "postcode",
+      "location_id",
+      "locality",
+      "location_description"
+    ),
+    conn = conn
+  ) %>%
+  data.frame()
+}
 
 # Find postcode function. It takes logitude/latitude vectors
 # and returns a vector of postcodes.

@@ -1,23 +1,22 @@
-# Add cutom version of mongolite if missing
-if(! 'mongolite' %in% c( installed.packages()[,'Package'])) install.packages('mongolite', repos = 'https://cran.microsoft.com/snapshot/2018-08-01')
 
 suppressPackageStartupMessages({
-# Setup Packages
-    library(config)
-#Shiny Packages  
+  # Setup Packages
+  library(config)
+  #Shiny Packages
   library(shiny)
   library(shinyjs)
   library(shinyWidgets)
   library(shinycssloaders)
   library(shinydashboard)
-
-#Formatting Packages
-  library(stringr)   
-  library(scales)   
-  library(waiter)   
+  
+  #Formatting Packages
+  library(stringr)
+  library(scales)
+  library(waiter)
   library(lubridate)
-
-#Data Packages
+  library(janitor)
+  
+  #Data Packages
   library(dplyr)
   library(data.table)
   library(OneR)
@@ -26,14 +25,14 @@ suppressPackageStartupMessages({
   library(sf)
   
   
-#DB Packages
+  #DB Packages
   library(RMariaDB)
   library(DBI)
   library(pool)
   library(mongolite)
   # library(here)
-
-#Graph Packages
+  
+  #Graph Packages
   library(ggplot2)
   library(ggiraph)
   library(ggiraphExtra)
@@ -41,10 +40,10 @@ suppressPackageStartupMessages({
   library(viridis)
   library(hrbrthemes)
   library(lattice)
-#Map Packages
+  #Map Packages
   library(leaflet)
   library(leaflet.extras)
-
+  
 })
 
 # load functions
@@ -54,16 +53,20 @@ source("server/s_plots.R")
 
 #config db connection pool
 
-config <- config::get(file = Sys.getenv("R_CONFIG_FILE", "conf/config.yml"))
+config <-
+  config::get(file = Sys.getenv("R_CONFIG_FILE", "conf/config.yml"))
 dw <- config$datawarehouse
 azure <- config$azure_primary
 
 use_mongo = TRUE
 
-db_pool <- pool::dbPool(
-  drv = RMariaDB::MariaDB(),
-  host = dw$server,
-  dbname = dw$database,
-  user = dw$uid,
-  password = dw$pwd
-)
+db_table <- 'traffic_test'
+if (!use_mongo) {
+  db_pool <- pool::dbPool(
+    drv = RMariaDB::MariaDB(),
+    host = dw$server,
+    dbname = dw$database,
+    user = dw$uid,
+    password = dw$pwd
+  )
+}

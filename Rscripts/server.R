@@ -8,56 +8,45 @@ if (use_mongo) {
     mongo(db = "primary",
           collection = "traffic_by_location",
           url = azure$mongo_url)
-  all_traffic <- mgo_traffic_by_location$find()
+  traffic_by_location <- mgo_traffic_by_location$find()
   
   mgo_traffic_by_location_weekly <-
     mongo(db = "primary",
           collection = "traffic_by_location_weekly",
           url = azure$mongo_url)
-  all_traffic_weekly <- mgo_traffic_by_location_weekly$find()
+  traffic_by_location_weekly <- mgo_traffic_by_location_weekly$find()
   
   mgo_traffic_by_location_monthly <-
     mongo(db = "primary",
           collection = "traffic_by_location_monthly",
           url = azure$mongo_url)
-  all_traffic_monthly <- mgo_traffic_by_location_monthly$find()
+  traffic_by_location_monthly <- mgo_traffic_by_location_monthly$find()
   
 } else{
   conn <- poolCheckout(db_pool)
   
-  all_traffic_weekly <-
-    get_traffic(
-      group_by = c(
-        "location",
-        "postcode",
-        "location_id",
-        "locality",
-        "location_description" ,
-        "week_start_date",
-        "hour_group"
-      ),
-      conn = conn
-    ) %>%
-    data.frame()
-  all_traffic <-
-    get_traffic(
-      group_by = c(
-        "location",
-        "postcode",
-        "location_id",
-        "locality",
-        "location_description"
-      ),
-      conn = conn
-    ) %>%
-    data.frame()
+  traffic_locations <- get_locations(conn = conn)
+  
+  traffic_by_location_monthly <- get_traffic_by_location_monthly(db_table,conn) 
+  
+  poolReturn(conn)
+  
+  conn <- poolCheckout(db_pool)
+  
+  traffic_by_location_weekly <- get_traffic_by_location_weekly(db_table,conn) 
+  
+  poolReturn(conn)
+  
+  conn <- poolCheckout(db_pool)
+  
+  traffic_by_location <- get_traffic_by_location(db_table,conn) 
   
   poolReturn(conn)
   
 }
 
 
-cleantable <- all_traffic %>%
+cleantable <- traffic_by_location %>%
   select(
     Suburb = locality,
     Postcode = postcode,
@@ -76,16 +65,16 @@ cleantable <- all_traffic %>%
 
 function(input, output, session) {
   # Leaflet bindings are a bit slow; for now we'll just sample to compensate
-  if (nrow(all_traffic) > 10000) {
+  if (nrow(traffic_by_location) > 10000) {
     set.seed(100)
     location_data <-
-      all_traffic[sample.int(nrow(all_traffic), 10000), ]
+      traffic_by_location[sample.int(nrow(traffic_by_location), 10000), ]
   } else{
-    location_data <- all_traffic
+    location_data <- traffic_by_location
   }
   
-  weekly_location_data <- all_traffic_weekly
-  monthly_location_data <- all_traffic_monthly
+  weekly_location_data <- traffic_by_location_weekly
+  monthly_location_data <- traffic_by_location_monthly
   # By ordering by centile, we ensure that the (comparatively rare) SuperZIPs
   # will be drawn last and thus be easier to see
   location_data <- location_data[order(location_data$count), ]
@@ -99,8 +88,8 @@ function(input, output, session) {
       addTiles(urlTemplate = "//{s}.tiles.mapbox.com/v3/jcheng.map-5ebohr46/{z}/{x}/{y}.png",
                attribution = 'Maps by <a href="http://www.mapbox.com/">Mapbox</a>')  %>%
       addFullscreenControl() %>%
-      # fitBounds(~ min(all_traffic$longitude), ~ min(all_traffic$latitude),
-      #           ~ max(all_traffic$longitude), ~ max(all_traffic$latitude))
+      # fitBounds(~ min(traffic_by_location$longitude), ~ min(traffic_by_location$latitude),
+      #           ~ max(traffic_by_location$longitude), ~ max(traffic_by_location$latitude))
       setView(lng = 144.9886,
               lat = -37.8167,
               zoom = 11.25)
@@ -154,9 +143,7 @@ function(input, output, session) {
   })
   
   
-  # Precalculate the breaks we'll need for the two histograms
-  volumeBreaks <-
-    hist(plot = FALSE, all_traffic$count, breaks = 20)$breaks
+  
   
   output$valueBox_volume <- renderValueBox({
     count <- sum(locationsInBounds()$count)
@@ -197,7 +184,7 @@ function(input, output, session) {
   
   output$lollipop_VolumeChangeByTime <- renderGirafe({
     graphColorPallet <- input$graph_pallet
-    build_plot_weekly_volume_change(weeklyLocationInBounds())
+    build_plot_volume_change_by_date(monthlyLocationInBounds())
   })
   
   
@@ -207,45 +194,32 @@ function(input, output, session) {
     
   })
   
-  output$histVolume <- renderPlot({
-    # If no postcodes are in view, don't plot
-    if (nrow(locationsInBounds()) == 0)
-      return(NULL)
-    
-    hist(
-      locationsInBounds()$count,
-      breaks = volumeBreaks,
-      main = "Location Traffic Volume (visible only)",
-      xlab = "Percentile",
-      xlim = range(all_traffic$count),
-      col = '#00DD00',
-      border = 'white'
-    )
-  })
-  
-  
-  output$histVolume <- renderPlot({
-    # If no postcodes are in view, don't plot
-    if (nrow(locationsInBounds()) == 0)
-      return(NULL)
-    
-    hist(
-      locationsInBounds()$count,
-      breaks = volumeBreaks,
-      main = "Location Traffic Volume (visible only)",
-      xlab = "Percentile",
-      xlim = range(all_traffic$count),
-      col = '#00DD00',
-      border = 'white'
-    )
-  })
+  # # Precalculate the breaks we'll need for the two histograms
+  # volumeBreaks <-
+  #   hist( monthly_location_data$avg, breaks = 10)
+  # 
+  # output$histVolume <- renderPlot({
+  #   # If no postcodes are in view, don't plot
+  #   if (nrow(locationsInBounds()) == 0)
+  #     return(NULL)
+  #   
+  #   hist(
+  #     # locationsInBounds()$count,
+  #     breaks = volumeBreaks,
+  #     main = "Location Traffic Volume (visible only)",
+  #     xlab = "Percentile",
+  #     xlim = range(traffic_by_location$count),
+  #     col = '#00DD00',
+  #     border = 'white'
+  #   )
+  # })
   
   # output$scatterCollegeIncome <- renderPlot({
   #   # If no postcodes are in view, don't plot
   #   if (nrow(locationsInBounds()) == 0)
   #     return(NULL)
   #
-  #   print(xyplot(income ~ college, data = zipsInBounds(), xlim = range(all_traffic$college), ylim = range(all_traffic$income)))
+  #   print(xyplot(income ~ college, data = zipsInBounds(), xlim = range(traffic_by_location$college), ylim = range(traffic_by_location$income)))
   # })
   
   # This observer is responsible for maintaining the circles and legend,
@@ -298,7 +272,7 @@ function(input, output, session) {
   # Show a popup at the given location
   showLocationPopup <- function(location_id, lat, lng) {
     selected_location <-
-      all_traffic[all_traffic$location_id == location_id, ]
+      traffic_by_location[traffic_by_location$location_id == location_id, ]
     content <- as.character(
       tagList(
         tags$h5(HTML(

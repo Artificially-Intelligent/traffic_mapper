@@ -1,56 +1,24 @@
 #aggregate data and insert into azure cosmos
 
 reload_cosmos_db <- function(db_table = "traffic_new") {
+  
   conn <- poolCheckout(db_pool)
   
   traffic_locations <- get_locations(conn = conn)
   
-  traffic_by_location_monthly <-
-    get_traffic(
-      table = db_table,
-      group_by = c(
-        "location",
-        "postcode",
-        "location_id",
-        "locality",
-        "location_description" ,
-        "month",
-        "hour_group",
-        "speed_group"
-      ),
-      conn = conn
-    ) %>%
-    data.frame()
+  traffic_by_location_monthly <- get_traffic_by_location_monthly(db_table,conn) 
   
-  traffic_by_location_weekly <-
-    get_traffic(
-      table = db_table,
-      group_by = c(
-        "location",
-        "postcode",
-        "location_id",
-        "locality",
-        "location_description" ,
-        "week_start_date",
-        "hour_group",
-        "speed_group"
-      ),
-      conn = conn
-    ) %>%
-    data.frame()
-  traffic_by_location <-
-    get_traffic(
-      table = db_table,
-      group_by = c(
-        "location",
-        "postcode",
-        "location_id",
-        "locality",
-        "location_description"
-      ),
-      conn = conn
-    ) %>%
-    data.frame()
+  poolReturn(conn)
+  
+  conn <- poolCheckout(db_pool)
+  
+  traffic_by_location_weekly <- get_traffic_by_location_weekly(db_table,conn) 
+  
+  poolReturn(conn)
+  
+  conn <- poolCheckout(db_pool)
+  
+  traffic_by_location <- get_traffic_by_location(db_table,conn) 
   
   poolReturn(conn)
   
