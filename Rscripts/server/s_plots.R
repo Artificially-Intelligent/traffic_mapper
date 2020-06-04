@@ -45,13 +45,14 @@ build_plot_monthly_volume_by_hour <- function(plot_data, pallet = graphColorPall
       # axis.title=element_text(size=24,face="bold")
     )
   
-  x <- girafe(ggobj = gg, width = 8)
-  x <- girafe_options(x = x
-                      # ,
-                      # opts_hover(css = "fill:orange")
-                      )
-  if (interactive())
-    print(x)
+  return(gg)
+  # x <- girafe(ggobj = gg, width = 8)
+  # x <- girafe_options(x = x
+  #                     # ,
+  #                     # opts_hover(css = "fill:orange")
+  #                     )
+  # if (interactive())
+  #   print(x)
 }
 
 build_plot_volume_change_by_date <- function(plot_data, pallet = graphColorPallet){
@@ -127,10 +128,11 @@ build_plot_volume_change_by_date <- function(plot_data, pallet = graphColorPalle
       # axis.title=element_text(size=24,face="bold")
     )
   
-  x <- girafe(ggobj = gg, width = 8, height = 6 )
-  x <- girafe_options(x = x)
-  if (interactive())
-    print(x)
+ return(gg)
+  # x <- girafe(ggobj = gg, width = 8, height = 6 )
+  # x <- girafe_options(x = x)
+  # if (interactive())
+  #   print(x)
 }
 
 
@@ -184,11 +186,11 @@ build_plot_speed_histogram <- function(plot_data, pallet = graphColorPallet){
       axis.text.y = element_text(hjust = 1, size = 16)
       # axis.title=element_text(size=24,face="bold")
     )
-  
-  x <- girafe(ggobj = gg, width = 8, height = 3 )
-  x <- girafe_options(x = x)
-  if (interactive())
-    print(x)
+  return(gg)
+  # x <- girafe(ggobj = gg, width = 8, height = 3 )
+  # x <- girafe_options(x = x)
+  # if (interactive())
+  #   print(x)
 }
 
 build_plot_weekly_speed_by_hour <- function(plot_data){
@@ -251,10 +253,10 @@ build_plot_weekly_speed_by_hour <- function(plot_data){
     #   # axis.title=element_text(size=24,face="bold")
     )
 
-  
-  x <- girafe(ggobj = gg, width = 8)
-  x <- girafe_options(x = x,
-                      opts_hover(css = "colour:red"))
-  if (interactive())
-    print(x)
+  return(gg)
+  # x <- girafe(ggobj = gg, width = 8)
+  # x <- girafe_options(x = x,
+  #                     opts_hover(css = "colour:red"))
+  # if (interactive())
+  #   print(x)
 }

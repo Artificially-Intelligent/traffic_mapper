@@ -170,30 +170,30 @@ function(input, output, session) {
     )
   })
   
-  output$area_VolumeByTime <- renderGirafe({
+  output$area_VolumeByTime <- renderPlotly({
     graphColorPallet <- input$graph_pallet
     build_plot_monthly_volume_by_hour(monthlyLocationInBounds())
   })
   
-  output$line_SpeedByTime <- renderGirafe({
+  output$line_SpeedByTime <- renderPlotly({
     graphColorPallet <- input$graph_pallet
     build_plot_weekly_speed_by_hour(monthlyLocationInBounds())
     
   })
   
   
-  output$lollipop_VolumeChangeByTime <- renderGirafe({
+  output$lollipop_VolumeChangeByTime <- renderPlotly({
     graphColorPallet <- input$graph_pallet
     build_plot_volume_change_by_date(monthlyLocationInBounds())
   })
   
-  output$histogram_SpeedDistrubution <- renderGirafe({
+  output$histogram_SpeedDistrubution <- renderPlotly({
     graphColorPallet <- input$graph_pallet
     build_plot_speed_histogram(monthlyLocationInBounds())
   }) 
   
   
-  output$summary.area_VolumeByTime <- renderGirafe({
+  output$summary.area_VolumeByTime <- renderPlotly({
     build_plot_monthly_volume_by_hour(weekly_location_data)
     
   })
