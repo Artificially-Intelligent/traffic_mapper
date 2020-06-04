@@ -139,8 +139,6 @@ build_plot_speed_histogram <- function(plot_data, pallet = graphColorPallet){
   if (nrow(plot_data) == 0)
     return(NULL)
   
-  plot_data <- traffic_by_location_monthly
-  
   p_data <- plot_data   %>%
     filter( !is.na(speed_group) ) %>%
     group_by(speed_group) %>%
