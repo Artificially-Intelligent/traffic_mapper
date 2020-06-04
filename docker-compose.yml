@@ -41,5 +41,6 @@ services:
       # Shiny Server!" diagnostics page.
       # - './mountpoints/apps:/srv/shiny-server'
       # - ./mountpoints/apps:/etc/cont-init.d
+      - 'C:/Users/Stuart/GitHub/traffic_mapper/Rscripts/conf:/usr/local/lib/shiny-server/config_mount'
 volumes:
   shiny_logs:

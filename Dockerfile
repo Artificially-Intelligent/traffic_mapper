@@ -1,5 +1,5 @@
 # Base image https://hub.docker.com/u/rocker/
-ARG SRC_TAG=3.6.3
+ARG SRC_TAG=traffic_mapper
 ARG SRC_IMAGE=artificiallyintelligent/shiny_lite
 ARG $BLD_DATE
 ARG $SRC_REPO
@@ -18,9 +18,8 @@ ENV DOCKER_IMAGE=$DEST_IMAGE
 
 ## install package dependcies
 ARG DISCOVERY=TRUE
-ARG PROJECT_PACKAGES=
-ARG PROJECT_PACKAGES_PLUS=config,shiny,shinycssloaders,shinyjs,shinyWidgets,stringr,scales,waiter,dplyr,data.table,geojson,mongolite,ggplot2,ggiraph,ggiraphExtra,RColorBrewer,viridis,hrbrthemes,lattice,leaflet,units
-# removed from PROJECT_PACKAGES_PLUS,readxl,geojsonio,sf,RMySQL,sf,V8,DBI,pool,protolite,rgeos,jqr,RPostgres
+ARG PROJECT_PACKAGES=config,shiny,shinycssloaders,shinyjs,shinyWidgets,stringr,scales,waiter,lubridate,dplyr,readxl,data.table,geojsonio,sf,RMySQL,DBI,pool,mongolite,here,ggplot2,ggiraph,ggiraphExtra,RColorBrewer,viridis,hrbrthemes,lattice,leaflet,OneR,shinycssloaders,shinydashboard,leaflet.extras,units,readxl,geojsonio,sf,RMySQL,sf,V8,DBI,pool,protolite,rgeos,jqr,RPostgres
+ARG PROJECT_PACKAGES_PLUS=
 ARG DEPENDENCY=
 
 ENV DISCOVER_PACKAGES=$DISCOVERY
@@ -33,16 +32,21 @@ ENV DEPENDENCY_INSTALL=$DEPENDENCY
 # ADD cont-init.d-defaults/03_install_package_dependencies.sh  ${SCRIPTS_DIR}/cont-init.d-defaults/03_install_package_dependencies.sh
 # ADD cont-init.d-defaults/04_install_packages.sh  ${SCRIPTS_DIR}/cont-init.d-defaults/04_install_packages.sh
 
-RUN chmod +x ${SCRIPTS_DIR}/cont-init.d-defaults/* && \ 
-	${SCRIPTS_DIR}/cont-init.d-defaults/03_install_package_dependencies.sh && \
-	${SCRIPTS_DIR}/cont-init.d-defaults/04_install_packages.sh
+RUN chmod +x ${SCRIPTS_DIR}/cont-init.d-defaults/* \ 
+	&& ${SCRIPTS_DIR}/cont-init.d-defaults/04_expand_packages_dependencies.sh \
+	&& ${SCRIPTS_DIR}/cont-init.d-defaults/05_install_package_dependencies.sh \
+	&& ${SCRIPTS_DIR}/cont-init.d-defaults/06_install_packages.sh
 
 COPY Rscripts $WWW_DIR
 
-RUN ${SCRIPTS_DIR}/cont-init.d-defaults/03_install_package_dependencies.sh && \
-	${SCRIPTS_DIR}/cont-init.d-defaults/04_install_packages.sh
+RUN ${SCRIPTS_DIR}/cont-init.d-defaults/04_expand_packages_dependencies.sh \
+	&& ${SCRIPTS_DIR}/cont-init.d-defaults/05_install_package_dependencies.sh \
+	&& ${SCRIPTS_DIR}/cont-init.d-defaults/06_install_packages.sh
 
 ENV INSTALL_PACKAGE_AT_RUNTIME=FALSE
+
+# Temporary overwrite of start script, remove later
+ADD  shiny-server/shiny-server.sh  ${SCRIPTS_DIR}/shiny-server.sh
 
 ## start shiny server
 RUN ln -f ${SCRIPTS_DIR}/shiny-server.sh /usr/bin/shiny-server.sh \
