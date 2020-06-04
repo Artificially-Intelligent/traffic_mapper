@@ -59,6 +59,8 @@ navbarPage(
         h3("Traffic Summary"),
         selectInput("color", "Color", vars),
         selectInput("size", "Size", vars, selected = "count"),
+        # checkboxInput("legend", "Show legend", TRUE),
+        
         # conditionalPanel("input.color == 'count' || input.size == 'count'",
         #   # Only prompt for threshold when coloring or sizing by superzip
         #   numericInput("threshold", "Volume threshold (> n % of total)", 2)
@@ -67,7 +69,7 @@ navbarPage(
         
         valueBoxOutput(width = 6,"valueBox_speed"),
         valueBoxOutput(width = 6,"valueBox_volume"),
-        girafeOutput("area_VolumeByTime", height = 200)
+        girafeOutput("lollipop_VolumeChangeByTime", height = 200)
         
         # ,
         # girafeOutput("line_SpeedByTime", height = 200)

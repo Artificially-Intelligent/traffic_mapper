@@ -11,8 +11,8 @@ get_locations <- function(table = "traffic_location", conn) {
 }
 
 get_traffic <- function(group_by = c('location'), table = "traffic", conn) {
-  
-  aggregated_traffic <- pool::dbReadTable(conn, table) %>%
+  DBI::dbReadTable(conn)
+  aggregated_traffic <- DBI::dbReadTable(conn = conn, table = table) %>%
     filter(postcode < 3900 & postcode >= 3000 ) %>%
     mutate(
       datetime = as.POSIXct(datetime),
@@ -44,6 +44,14 @@ get_traffic <- function(group_by = c('location'), table = "traffic", conn) {
         hour < 24 ~ "18:00-24:00",
         TRUE ~ as.character(hour)
       )),
+      hour_group = factor(case_when(
+        hour <  6 ~ "00:00-06:00",
+        hour < 10 ~ "06:00-10:00",
+        hour < 14 ~ "10:00-14:00",
+        hour < 18 ~ "14:00-18:00",
+        hour < 24 ~ "18:00-24:00",
+        TRUE ~ as.character(hour)
+      )),
       direction = factor(case_when(
           direction == "N" ~ "North",
           direction == "S" ~ "South",
@@ -52,8 +60,7 @@ get_traffic <- function(group_by = c('location'), table = "traffic", conn) {
           TRUE ~ direction
         )),
       total_count = sum(count),
-      max_speed = max(sum_speed),
-      speed_group = bin(sum_speed / count, nbins = 7)
+      max_speed = max(sum_speed)
     ) %>%
     group_by_at(group_by) %>%
     summarise(
@@ -72,7 +79,6 @@ get_traffic <- function(group_by = c('location'), table = "traffic", conn) {
       avg_rho = round(sum(sum_rho) / count, digits = 1)
     )
 
-  
   return(aggregated_traffic)
 }
 

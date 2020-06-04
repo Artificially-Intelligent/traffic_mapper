@@ -3,7 +3,6 @@ suppressPackageStartupMessages({
     library(config)
 #Shiny Packages  
   library(shiny)
-  library(shinycssloaders)
   library(shinyjs)
   library(shinyWidgets)
   library(shinycssloaders)
@@ -17,10 +16,12 @@ suppressPackageStartupMessages({
 
 #Data Packages
   library(dplyr)
-  # library(readxl)
   library(data.table)
-  # library(geojsonio)
-  # library(sf)
+  library(OneR)
+  library(readxl)
+  library(geojsonio)
+  library(sf)
+  
   
 #DB Packages
   library(RMySQL)
@@ -39,11 +40,13 @@ suppressPackageStartupMessages({
   library(lattice)
 #Map Packages
   library(leaflet)
+  library(leaflet.extras)
 
 })
 
 # load functions
 source("server/s_data.R")
+source("server/s_plots.R")
 
 
 #config db connection pool
