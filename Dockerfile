@@ -17,8 +17,8 @@ ENV SOURCE_COMMIT=$SRC_COMMIT
 ENV DOCKER_IMAGE=$DEST_IMAGE
 
 ## install package dependcies
-ARG DISCOVERY=TRUE
-ARG PROJECT_PACKAGES=config,shiny,shinycssloaders,shinyjs,shinyWidgets,stringr,scales,waiter,lubridate,dplyr,readxl,data.table,geojsonio,sf,RMySQL,DBI,pool,mongolite,here,ggplot2,ggiraph,ggiraphExtra,RColorBrewer,viridis,hrbrthemes,lattice,leaflet,OneR,shinycssloaders,shinydashboard,leaflet.extras,units,readxl,geojsonio,sf,RMySQL,sf,V8,DBI,pool,protolite,rgeos,jqr,RPostgres
+ARG DISCOVERY=FALSE
+ARG PROJECT_PACKAGES=config,shiny,shinycssloaders,shinyjs,shinyWidgets,stringr,scales,waiter,lubridate,dplyr,readxl,data.table,geojsonio,sf,RMySQL,DBI,pool,mongolite,here,ggplot2,ggiraph,ggiraphExtra,RColorBrewer,viridis,hrbrthemes,lattice,leaflet,OneR,shinycssloaders,shinydashboard,leaflet.extras,units,readxl,geojsonio,sf,RMySQL,sf,V8,DBI,pool,protolite,rgeos,jqr,RPostgres,janitor,RMariaDB,jsonify
 ARG PROJECT_PACKAGES_PLUS=
 ARG DEPENDENCY=
 
