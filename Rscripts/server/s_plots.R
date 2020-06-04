@@ -144,6 +144,14 @@ build_plot_speed_histogram <- function(plot_data, pallet = graphColorPallet){
     return(NULL)
   
   p_data <- plot_data   %>%
+    mutate(speed_group = case_when(speed_group == '40-45' ~ '40+',
+                                   speed_group == '45-50' ~ '40+',
+                                   speed_group == '50-55' ~ '40+',
+                                   speed_group == '55-60' ~ '40+',
+                                   speed_group == '60+' ~ '40+',
+                                   TRUE ~ speed_group
+                                   
+                                   )) %>%
     filter( !is.na(speed_group) ) %>%
     group_by(speed_group) %>%
     summarise(count = as.numeric(sum(count))) 
