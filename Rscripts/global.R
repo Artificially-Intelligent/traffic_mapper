@@ -60,12 +60,14 @@ print("Full File list:")
 print(list.files(recursive = TRUE), path = "/")
 
 #config db connection pool
+# 
+# config <-
+#   config::get(file = Sys.getenv("R_CONFIG_FILE", "conf/config.yml"))
+# dw <- config$datawarehouse
+# azure <- config$azure_primary
 
-config <-
-  config::get(file = Sys.getenv("R_CONFIG_FILE", "conf/config.yml"))
-dw <- config$datawarehouse
-azure <- config$azure_primary
-
+azure <- data.table( mongo_url = Sys.getenv('AZURE_URL'))
+                       
 use_mongo = TRUE
 
 db_table <- 'traffic_test'
