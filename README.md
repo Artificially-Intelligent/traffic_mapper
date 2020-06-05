@@ -1,4 +1,4 @@
-# [Artificially-Intelligent/Shiny_Lite](https://github.com/Artificially-Intelligent/shiny_lite)
+# [Artificially-Intelligent/traffic_mapper](https://github.com/Artificially-Intelligent/traffic_mapper)
 
 ## Description
 Maps and statistics for Victorian bike path usage
@@ -18,8 +18,9 @@ docker create \
   -e SHINY_APP_INIT_TIMEOUT=60 \
   -e SHINY_APP_IDLE_TIMEOUT=5 \
   -e SHINY_GOOGLE_ANALYTICS_ID="UA-12345-1" \
-  -e APPLICATION_LOGS_TO_STDOUT=FALSE \
-  -e DISCOVER_PACKAGES=TRUE \
+  -e APPLICATION_LOGS_TO_STDOUT=TRUE \
+  -e AZURE_URL=mongodb://shiny:H26KAgd-find-your-own-connection-details-in-azure-cosmos-db-EjA==@shiny.documents.azure.com:10255/mean-dev?ssl=true \
+  -e R_CONFIG_FILE=/etc/shiny-server/conf/config.yml \
   --restart unless-stopped \
   artificiallyintelligent/traffic_mapper
 ```
@@ -36,7 +37,7 @@ services:
     image: artificiallyintelligent/traffic_mapper
     container_name: traffic_mapper
     environment:
-      - DISCOVER_PACKAGES=true
+      - DISCOVER_PACKAGES=FALSE
       - SHINY_APP_IDLE_TIMEOUT=5
       - SHINY_APP_INIT_TIMEOUT=60
       - SHINY_GOOGLE_ANALYTICS_ID="UA-12345-1"
@@ -66,6 +67,8 @@ Container images are configured using parameters passed at runtime (such as thos
 | `-e SHINY_APP_IDLE_TIMEOUT=5` | Specify a app_idle_timeout to use when starting shiny server. Default value is 5, boosting to 1800 helps prevent session disconnects. See app_idle_timeout in shiny documentation for details. http://docs.rstudio.com/shiny-server/#application-timeouts |
 | `-e SHINY_APP_INIT_TIMEOUT=60` | Specify a app_init_timeout to use when starting shiny server. Default value is 60, boosting to 1800 helps prevent session disconnects. See app_init_timeout in shiny documentation for details. http://docs.rstudio.com/shiny-server/#application-timeouts |
 | `-e SHINY_GOOGLE_ANALYTICS_ID=UA-12345-1` | Specify a google_analytics_id for shiny to enable Google Analytics tracking globally. See app_init_timeout in shiny documentation for details. https://docs.rstudio.com/shiny-server/#google-analytics |
+| `-e R_CONFIG_FILE=/etc/shiny-server/conf/config.yml` | Path to config file in mounted volume |
+| `-e RAZURE_URL=mongodb://shiny:H26KAgd-find-your-own-connection-details-in-azure-cosmos-db-EjA==@shiny.documents.azure.com:10255/mean-dev?ssl=true` | URL for accessin Azure Cosmos DB database |
 
 ## Preinstalled Packages
 
@@ -78,7 +81,7 @@ Look at instructions here for the general process of how to:
 
 Run package, start shiny-server and view logs
   ```
-  docker run -it -p 3838:3838 -e PORT=3838 --name shiny artificiallyintelligent/shiny:latest /bin/bash
+  docker run -it -p 3838:3838 -e PORT=3838 --name shiny artificiallyintelligent/traffic_mapper:latest /bin/bash
   ```
   ```
   setsid /usr/bin/srv/shiny-server.sh >/dev/null 2>&1 < /dev/null &
