@@ -73,6 +73,11 @@ function(input, output, session) {
     location_data <- traffic_by_location
   }
   
+  print("File list:")
+  print(list.files(recursive = TRUE))
+  print(paste("Config path:", Sys.getenv("R_CONFIG_FILE", "conf/config.yml")))
+  
+  
   weekly_location_data <- traffic_by_location_weekly
   monthly_location_data <- traffic_by_location_monthly
   # By ordering by centile, we ensure that the (comparatively rare) SuperZIPs

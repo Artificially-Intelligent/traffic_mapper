@@ -51,13 +51,6 @@ suppressPackageStartupMessages({
 source("server/s_data.R")
 source("server/s_plots.R")
 
-print("File list:")
-print(list.files(recursive = TRUE))
-print(paste("Config path:", Sys.getenv("R_CONFIG_FILE", "conf/config.yml")))
-
-print("*********************************************************************")
-print("Full File list:")
-print(list.files(recursive = TRUE), path = "/")
 
 #config db connection pool
 # 
