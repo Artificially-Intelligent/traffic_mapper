@@ -10,11 +10,11 @@ if (use_mongo) {
           url = azure$mongo_url)
   traffic_by_location <- mgo_traffic_by_location$find()
 
-  mgo_traffic_by_location_weekly <-
-    mongo(db = "primary",
-          collection = "traffic_by_location_weekly",
-          url = azure$mongo_url)
-  traffic_by_location_weekly <- mgo_traffic_by_location_weekly$find()
+  # mgo_traffic_by_location_weekly <-
+  #   mongo(db = "primary",
+  #         collection = "traffic_by_location_weekly",
+  #         url = azure$mongo_url)
+  # traffic_by_location_weekly <- mgo_traffic_by_location_weekly$find()
 
   mgo_traffic_by_location_monthly <-
     mongo(db = "primary",
@@ -31,11 +31,11 @@ if (use_mongo) {
   
   poolReturn(conn)
   
-  conn <- poolCheckout(db_pool)
-  
-  traffic_by_location_weekly <- get_traffic_by_location_weekly(db_table,conn) 
-  
-  poolReturn(conn)
+  # conn <- poolCheckout(db_pool)
+  # 
+  # traffic_by_location_weekly <- get_traffic_by_location_weekly(db_table,conn) 
+  # 
+  # poolReturn(conn)
   
   conn <- poolCheckout(db_pool)
   
@@ -78,7 +78,7 @@ function(input, output, session) {
   print(paste("Config path:", Sys.getenv("R_CONFIG_FILE", "conf/config.yml")))
   
   
-  weekly_location_data <- traffic_by_location_weekly
+  # weekly_location_data <- traffic_by_location_weekly
   monthly_location_data <- traffic_by_location_monthly
   # By ordering by centile, we ensure that the (comparatively rare) SuperZIPs
   # will be drawn last and thus be easier to see
@@ -119,19 +119,19 @@ function(input, output, session) {
   })
   
   
-  weeklyLocationInBounds <- reactive({
-    if (is.null(input$map_bounds))
-      return(location_data[FALSE, ])
-    bounds <- input$map_bounds
-    latRng <- range(bounds$north, bounds$south)
-    lngRng <- range(bounds$east, bounds$west)
-    
-    subset(
-      weekly_location_data,
-      latitude >= latRng[1] & latitude <= latRng[2] &
-        longitude >= lngRng[1] & longitude <= lngRng[2]
-    )
-  })
+  # weeklyLocationInBounds <- reactive({
+  #   if (is.null(input$map_bounds))
+  #     return(location_data[FALSE, ])
+  #   bounds <- input$map_bounds
+  #   latRng <- range(bounds$north, bounds$south)
+  #   lngRng <- range(bounds$east, bounds$west)
+  #   
+  #   subset(
+  #     weekly_location_data,
+  #     latitude >= latRng[1] & latitude <= latRng[2] &
+  #       longitude >= lngRng[1] & longitude <= lngRng[2]
+  #   )
+  # })
   
   monthlyLocationInBounds <- reactive({
     if (is.null(input$map_bounds))
@@ -165,7 +165,7 @@ function(input, output, session) {
   
   output$valueBox_speed <- renderValueBox({
     speed <-
-      sum(locationsInBounds()$total_speed) / sum(weeklyLocationInBounds()$count)
+      sum(locationsInBounds()$total_speed) / sum(monthlyLocationInBounds()$count)
     label <- "Average Speed(Km/h)"
     valueBox(
       value = formatC(speed, digits = 1, format = "f"),
@@ -201,7 +201,7 @@ function(input, output, session) {
   
   
   output$summary.area_VolumeByTime <- renderPlotly({
-    build_plot_monthly_volume_by_hour(weekly_location_data)
+    build_plot_monthly_volume_by_hour(monthly_location_data)
     
   })
   

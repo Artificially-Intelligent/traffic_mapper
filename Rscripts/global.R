@@ -53,14 +53,20 @@ source("server/s_plots.R")
 
 
 #config db connection pool
-# 
-# config <-
-#   config::get(file = Sys.getenv("R_CONFIG_FILE", "conf/config.yml"))
-# dw <- config$datawarehouse
-# azure <- config$azure_primary
+config_file <-  Sys.getenv("R_CONFIG_FILE", "conf/config.yml")
 
-azure <- data.table( mongo_url = Sys.getenv('AZURE_URL'))
-                       
+if(file.exists(config_file)){
+  print(paste('Loading config from',config_file))
+  config <-
+    config::get(file = config_file)
+  dw <- config$datawarehouse
+  azure <- config$azure_primary
+}
+if(nchar(Sys.getenv('AZURE_URL'))> 0){
+  print(paste('Loading azure connection URL from env variable "AZURE_URL"'))
+  azure <- data.table( mongo_url = Sys.getenv('AZURE_URL'))
+}
+
 use_mongo = TRUE
 
 db_table <- 'traffic_test'
