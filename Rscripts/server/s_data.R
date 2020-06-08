@@ -1,6 +1,6 @@
 #data retrival functions
 
-get_locations <- function(table = "traffic_location", conn) {
+get_locations <- function(table = "traffic_locations", conn) {
   
   traffic_locations <- pool::dbReadTable(conn, table) %>%
     filter(postcode < 3900 & postcode >= 3000 ) %>%
@@ -83,6 +83,7 @@ get_traffic <- function(group_by = c('location'), table = "traffic", conn) {
 }
 
 get_traffic_by_location_monthly  <- function(db_table,conn) {
+  conn <- poolCheckout(db_pool)
   get_traffic(
     table = db_table,
     group_by = c(
@@ -98,6 +99,7 @@ get_traffic_by_location_monthly  <- function(db_table,conn) {
     conn = conn
   ) %>%
   data.frame()
+  poolReturn(conn)
 }
 
 

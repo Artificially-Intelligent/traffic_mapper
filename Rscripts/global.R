@@ -65,12 +65,14 @@ if(file.exists(config_file)){
 if(nchar(Sys.getenv('AZURE_URL'))> 0){
   print(paste('Loading azure connection URL from env variable "AZURE_URL"'))
   azure <- data.table( mongo_url = Sys.getenv('AZURE_URL'))
+  azure$db <- "primary"
 }
 
 use_mongo = TRUE
 
-db_table <- 'traffic_test'
 if (!use_mongo) {
+  db_table <- 'traffic'
+  
   db_pool <- pool::dbPool(
     drv = RMariaDB::MariaDB(),
     host = dw$server,

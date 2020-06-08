@@ -40,3 +40,4 @@ packrat/
 Rscripts/.Rprofile
 Rscripts/data/Bicycle_Volume_Speed/*
 Rscripts/data/Bicycle_Volume_Speed_zip/*
+*/conf/config.yml
