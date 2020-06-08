@@ -54,6 +54,7 @@ for(i in 1:length(trafficdata_source_uri)){
     full_db_reload = FALSE
   load_traffic_to_cosmos(
     full_db_reload = full_db_reload,
+    traffic_locations = traffic_locations,
     trafficdata_source_uri = trafficdata_source_uri[i]
   )
 }

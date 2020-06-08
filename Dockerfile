@@ -49,8 +49,11 @@ RUN rm ${SCRIPTS_DIR}/cont-init.d-defaults/04_expand_packages_dependencies.sh \
 	${SCRIPTS_DIR}/cont-init.d-defaults/05_install_package_dependencies.sh \
 	${SCRIPTS_DIR}/cont-init.d-defaults/06_install_packages.sh
 
+COPY shiny-server/run_dataload.sh ${SCRIPTS_DIR}/run_dataload.sh
+
 ## start shiny server
 RUN ln -f ${SCRIPTS_DIR}/shiny-server.sh /usr/bin/shiny-server.sh \
-	&& chmod +x /usr/bin/shiny-server.sh
+	&& chmod +x /usr/bin/shiny-server.sh \
+	&& chmod +x ${SCRIPTS_DIR}/run_dataload.sh
 
 CMD ["/usr/bin/shiny-server.sh"]

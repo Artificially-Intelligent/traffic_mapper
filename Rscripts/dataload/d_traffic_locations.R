@@ -64,7 +64,7 @@ load_traffic_locations <-
         "-",
         bike_traffic_locations_grouped$location_description
       )
-    return( as.data.table(bike_traffic_locations_grouped))
+    return( bike_traffic_locations_grouped)
     
   }
 

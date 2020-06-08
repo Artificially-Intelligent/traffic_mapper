@@ -94,6 +94,7 @@ load_traffic_to_cosmos <-
         "rows:",
         nrow(data)
       ))
+      
       if (nrow(data) > 0) {
         bike_traffic_data <- data %>%
           data.frame(inserttime =  Sys.time(),
@@ -160,10 +161,7 @@ load_traffic_to_cosmos <-
           ) %>%
           data.table()
         
-        # conn <- poolCheckout(db_pool)
-        # traffic_locations <- dbReadTable(db_pool, "traffic_location")  %>%
-        #   data.table()
-        # poolReturn(conn)
+        traffic_locations <- data.table(traffic_locations)
         
         # Merge traffic data and traffic location into a single datset
         bike_traffic <-
