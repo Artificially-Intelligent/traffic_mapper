@@ -1,5 +1,11 @@
 #Load traffic data and merge with traffic_location for DB, write result to DB
 
+subset_colclasses <- function(DF, colclasses = "numeric") {
+  DF[, sapply(DF, function(vec, test)
+    class(vec) %in% test, test = colclasses)]
+}
+
+
 load_traffic_to_cosmos <-
   function(full_db_reload = FALSE,
            traffic_locations = traffic_locations,
@@ -9,25 +15,131 @@ load_traffic_to_cosmos <-
              ".zip",
              sep = ""
            )) {
+    mgo_traffic_by_location_aggregated <-
+      mongo(db = azure$db,
+            collection = "traffic_by_location_aggregated",
+            url = azure$mongo_url)
     mgo_traffic_by_location_hourly <-
       mongo(db = azure$db,
             collection = "traffic_by_location_hourly",
             url = azure$mongo_url)
+    mgo_traffic_by_location_daily <-
+      mongo(db = azure$db,
+            collection = "traffic_by_location_daily",
+            url = azure$mongo_url)
+    mgo_traffic_by_location_monthly <-
+      mongo(db = azure$db,
+            collection = "traffic_by_location_monthly",
+            url = azure$mongo_url)
+    mgo_traffic_by_location <-
+      mongo(db = azure$db,
+            collection = "traffic_by_location",
+            url = azure$mongo_url)
+    
+    if (full_db_reload) {
+      mgo_traffic_by_location_aggregated$drop()
+      # mgo_traffic_by_location_hourly$drop()
+      mgo_traffic_by_location_daily$drop()
+      mgo_traffic_by_location_monthly$drop()
+      mgo_traffic_by_location$drop()
+    }
+    
     
     print(
       paste(
-        mgo_traffic_by_location_hourly$info()$collection ,
+        mgo_traffic_by_location_aggregated$info()$collection ,
         "starting record count:",
-        mgo_traffic_by_location_hourly$count()
+        mgo_traffic_by_location_aggregated$count()
       )
     )
     
-    mgo_traffic_by_location_hourly$distinct("sourcefile")
     
     meta_traffic <- data.frame(file = character(0))
-    if(mgo_traffic_by_location_hourly$count() > 0){
-      meta_traffic <- data.frame(file = mgo_traffic_by_location_hourly$distinct("sourcefile"))
+    if (mgo_traffic_by_location$count() > 0) {
+      meta_traffic <-
+        data.frame(file = mgo_traffic_by_location$distinct("sourcefile"))
     }
+    
+    traffic_by_location_sourefiles <- mgo_traffic_by_location$distinct("sourcefile") 
+    traffic_by_location_aggregated_sourefiles <- mgo_traffic_by_location_aggregated$distinct("sourcefile")
+    incomplete_load_sourefiles <- traffic_by_location_aggregated_sourefiles[! traffic_by_location_aggregated_sourefiles %in% traffic_by_location_sourefiles]
+    
+    
+    for (sourefiles in incomplete_load_sourefiles) {
+      print(paste("incomplete load detected, removing records from",sourefiles))
+      json_filter <-
+        paste('{"sourcefile" : "', sourefiles , '"}', sep =  "")
+      
+      before <- mgo_traffic_by_location_aggregated$count()
+      mgo_traffic_by_location_aggregated$remove(json_filter)
+      print(
+        paste(
+          "removed",
+          mgo_traffic_by_location_aggregated$count() - before,
+          "records from",
+          mgo_traffic_by_location_aggregated$info()$collection
+        )
+      )
+      
+      before <- mgo_traffic_by_location_daily$count()
+      mgo_traffic_by_location_daily$remove(json_filter)
+      print(
+        paste(
+          "removed",
+          mgo_traffic_by_location_daily$count() - before,
+          "records from",
+          mgo_traffic_by_location_daily$info()$collection
+        )
+      )
+      
+      before <- mgo_traffic_by_location_monthly$count()
+      mgo_traffic_by_location_monthly$remove(json_filter)
+      print(
+        paste(
+          "removed",
+          mgo_traffic_by_location_monthly$count() - before,
+          "records from",
+          mgo_traffic_by_location_monthly$info()$collection
+        )
+      )
+    }
+    
+    
+    mgo_traffic_by_location_aggregated$index(add  = "location")
+    mgo_traffic_by_location_aggregated$index(add  = "sourcefile")
+    mgo_traffic_by_location_aggregated$index(add  = "inserttime")
+    mgo_traffic_by_location_aggregated$index(add  = "month")
+    mgo_traffic_by_location_aggregated$index(add  = "date")
+    mgo_traffic_by_location_aggregated$index(add  = "hour_group")
+    mgo_traffic_by_location_aggregated$index(add  = "hour")
+    mgo_traffic_by_location_aggregated$index(add  = "datetime")
+    
+    mgo_traffic_by_location_hourly$index(add  = "location")
+    mgo_traffic_by_location_hourly$index(add  = "sourcefile")
+    mgo_traffic_by_location_hourly$index(add  = "inserttime")
+    mgo_traffic_by_location_hourly$index(add  = "month")
+    mgo_traffic_by_location_hourly$index(add  = "hour_group")
+    mgo_traffic_by_location_hourly$index(add  = "date")
+    mgo_traffic_by_location_hourly$index(add  = "hour")
+    
+    mgo_traffic_by_location_daily$index(add  = "location")
+    mgo_traffic_by_location_daily$index(add  = "sourcefile")
+    mgo_traffic_by_location_daily$index(add  = "inserttime")
+    mgo_traffic_by_location_daily$index(add  = "month")
+    mgo_traffic_by_location_daily$index(add  = "hour_group")
+    mgo_traffic_by_location_daily$index(add  = "date")
+    
+    mgo_traffic_by_location_monthly$index(add  = "location")
+    mgo_traffic_by_location_monthly$index(add  = "sourcefile")
+    mgo_traffic_by_location_monthly$index(add  = "inserttime")
+    mgo_traffic_by_location_monthly$index(add  = "month")
+    mgo_traffic_by_location_monthly$index(add  = "hour_group")
+    
+    mgo_traffic_by_location$index(add  = "location")
+    mgo_traffic_by_location$index(add  = "sourcefile")
+    mgo_traffic_by_location$index(add  = "inserttime")
+    
+    # location_count <- mgo_traffic_by_location$aggregate('[{"$group":{"_id":"$location", "count": {"$sum":1}}}]')
     
     
     
@@ -55,6 +167,10 @@ load_traffic_to_cosmos <-
     trafficdata_source_directory <-
       file.path('data', 'Bicycle_Volume_Speed')
     print('unzipping source files')
+    
+    #Remove any existing unziped files in destination folder
+    unlink(trafficdata_source_directory, recursive = TRUE)
+    
     lapply(list.files(
       path = exdir_path,
       pattern = '*.zip',
@@ -83,9 +199,10 @@ load_traffic_to_cosmos <-
     trafficdata_source_files <-
       trafficdata_source_files[!file.path(basename(dirname(trafficdata_source_files)), basename(trafficdata_source_files)) %in% meta_traffic$file]
     
-    for (file in trafficdata_source_files) {
-      sourcefile <- file.path(basename(dirname(file)), basename(file))
-      data <- read.csv(file)
+    for (traffic_source_file in trafficdata_source_files) {
+      sourcefile <-
+        file.path(basename(dirname(traffic_source_file)), basename(traffic_source_file))
+      bike_traffic_data_raw <- read.csv(traffic_source_file)
       print(paste(
         "Reading file:",
         sourcefile,
@@ -94,19 +211,22 @@ load_traffic_to_cosmos <-
         "rows:",
         nrow(data)
       ))
+      unlink(traffic_source_file)
       
-      if (nrow(data) > 0) {
-        bike_traffic_data <- data %>%
-          data.frame(inserttime =  Sys.time(),
-                     sourcefile = sourcefile)
-        
+      if (nrow(bike_traffic_data_raw) > 0) {
+        # bike_traffic_data <- data %>%
+        #   data.frame(inserttime =  Sys.time(),
+        #              sourcefile = sourcefile)
+        #
         #remove source file
-        unlink(file)
         
-        colnames(bike_traffic_data) <-
-          janitor::make_clean_names(colnames(bike_traffic_data))
         
-        bike_traffic_data_grouped <- bike_traffic_data %>%
+        colnames(bike_traffic_data_raw) <-
+          janitor::make_clean_names(colnames(bike_traffic_data_raw))
+        
+        bike_traffic_data_aggregated <- bike_traffic_data_raw  %>%
+          data.frame(inserttime =  Sys.time(),
+                     sourcefile = sourcefile) %>%
           mutate(
             location_id = paste(sep = "",  "D" , tis_data_request, "X", site_xn_route, "P"),
             time = as.factor(paste(sep = "", substr(time, 1, 3), "00:00")),
@@ -131,91 +251,76 @@ load_traffic_to_cosmos <-
           ) %>%
           mutate(datetime =  as.POSIXct(strptime(paste(date, time), format = '%d/%m/%Y %H:%M:%S'))) %>%
           mutate(datetime = format(datetime, '%Y-%m-%d %H:%M:%S')) %>%
-          group_by(
-            location_id,
-            loc_leg,
-            direction,
-            lane,
-            datetime,
-            speed_group,
-            vehicle,
-            class,
-            axle,
-            axle_grouping,
-            data_type,
-            inserttime,
-            sourcefile
+          group_by_at(
+            c(
+              "inserttime",
+              "sourcefile" ,
+              "datetime",
+              "location_id",
+              "speed_group",
+              "datetime",
+              "time",
+              colnames(subset_colclasses(
+                bike_traffic_data_raw,
+                c("factor", "character", "integer")
+              ))
+            )
           ) %>%
           summarise(
-            count = n(),
-            var_speed = var(speed),
-            sum_speed = sum(speed),
-            var_wheelbase = var(wheelbase),
-            sum_wheelbase = sum(wheelbase),
-            var_headway = var(headway),
-            sum_headway =  sum(headway),
-            var_gap = var(gap),
-            sum_gap = sum(gap),
-            var_rho = var(rho),
-            sum_rho = sum(rho)
-          ) %>%
-          data.table()
+            sum_speed = as.numeric(sum(speed)),
+            max_speed = as.numeric(max(speed)),
+            min_speed = as.numeric(min(speed)),
+            var_speed = as.numeric(var(sum_speed)),
+            sum_wheelbase = as.numeric(sum(wheelbase)),
+            sum_headway = as.numeric(sum(headway)),
+            sum_gap = as.numeric(sum(headway)),
+            sum_rho = as.numeric(sum(rho)),
+            var_wheelbase = as.numeric(var(wheelbase)),
+            var_headway = as.numeric(var(headway)),
+            var_gap = as.numeric(var(headway)),
+            var_rho = as.numeric(var(rho)),
+            count = n()
+          ) %>% data.table()
         
         traffic_locations <- data.table(traffic_locations)
         
         # Merge traffic data and traffic location into a single datset
-        bike_traffic <-
-          traffic_locations[bike_traffic_data_grouped, on = 'location_id']
+        bike_traffic_data_aggregated <-
+          traffic_locations[bike_traffic_data_aggregated, on = 'location_id'] %>%
+          add_attributes_to_traffic()
         
-        # # Prepare metadata for insert
-        # sourcefiles <-
-        #   file.path(basename(dirname(trafficdata_source_files)),
-        #             basename(trafficdata_source_files)) %>%
-        #   data.frame(inserttime =  Sys.time())
-        # colnames(sourcefiles) <- c("file", "inserttime")
+        group_by_timeseries <- c("hour_group",
+                                 "speed_group")
         
-        # bike_traffic_missinglocationinfo <-
-        #   bike_traffic[is.na(bike_traffic$location),]
-        # print(paste(
-        #   sep = "",
-        #   "Missing location info: " ,
-        #   nrow(bike_traffic_missinglocationinfo) ,
-        #   "/",
-        #   nrow(bike_traffic),
-        #   " (",
-        #   round(
-        #     100 *  nrow(bike_traffic_missinglocationinfo) / nrow(bike_traffic),
-        #     digits = 1
-        #   ),
-        #   "%)"
-        # ))
+        group_by_location <- c(
+          "location",
+          "postcode",
+          "location_id",
+          "locality",
+          "location_description" ,
+          "sourcefile",
+          "inserttime"
+        )
         
-        mgo_traffic_by_location_hourly$insert(bike_traffic)
+        bike_traffic_data_daily <- bike_traffic_data_aggregated  %>%
+          aggregate_traffic(unique(
+            c(group_by_timeseries, group_by_location, "month", "date")
+          ))
+        
+        bike_traffic_data_monthly <- bike_traffic_data_daily  %>%
+          aggregate_traffic(unique(c(
+            group_by_timeseries, group_by_location, "month"
+          )))
+        
+        bike_traffic_data_location <- bike_traffic_data_monthly  %>%
+          aggregate_traffic(c(group_by_location))
+        
+        mgo_traffic_by_location_aggregated$insert(bike_traffic_data_aggregated)
+        mgo_traffic_by_location_daily$insert(bike_traffic_data_daily)
+        mgo_traffic_by_location_monthly$insert(bike_traffic_data_monthly)
+        mgo_traffic_by_location$insert(bike_traffic_data_location)
       }
     }
-    # conn <- poolCheckout(db_pool)
-    # dbBegin(conn)
-    # dbWriteTable(
-    #   conn,
-    #   db_table,
-    #   bike_traffic,
-    #   append = !full_db_reload,
-    #   overwrite = full_db_reload,
-    #   row.names = FALSE
-    # )
-    # dbSendQuery(conn,
-    #             paste("ALTER TABLE ", db_table, " MODIFY datetime datetime;"))
-    # dbWriteTable(
-    #   conn,
-    #   paste("meta_", db_table, sep = ""),
-    #   sourcefiles,
-    #   append = !full_db_reload,
-    #   overwrite = full_db_reload,
-    #   row.names = FALSE
-    # )
-    #
-    # dbCommit(conn)   # or dbRollback(conn) if something went wrong
-    # poolReturn(conn)
     
     #remove source data
     unlink(trafficdata_source_files, recursive = TRUE)
