@@ -4,23 +4,23 @@
 ## Data Load ##########################################
 
 if (use_mongo) {
-  mgo_traffic_by_location <-
-    mongo(db = "primary",
-          collection = "traffic_by_location",
-          url = azure$mongo_url)
-  traffic_by_location <- mgo_traffic_by_location$find()
-
-  # mgo_traffic_by_location_weekly <-
+  # mgo_traffic_by_location <-
   #   mongo(db = "primary",
-  #         collection = "traffic_by_location_weekly",
+  #         collection = "traffic_by_location",
   #         url = azure$mongo_url)
-  # traffic_by_location_weekly <- mgo_traffic_by_location_weekly$find()
-
-  mgo_traffic_by_location_monthly <-
-    mongo(db = "primary",
-          collection = "traffic_by_location_monthly",
-          url = azure$mongo_url)
-  traffic_by_location_monthly <- mgo_traffic_by_location_monthly$find()
+  # traffic_by_location <- mgo_traffic_by_location$aggregate() 
+  # 
+  # # mgo_traffic_by_location_weekly <-
+  # #   mongo(db = "primary",
+  # #         collection = "traffic_by_location_weekly",
+  # #         url = azure$mongo_url)
+  # # traffic_by_location_weekly <- mgo_traffic_by_location_weekly$find()
+  # 
+  # mgo_traffic_by_location_monthly <-
+  #   mongo(db = "primary",
+  #         collection = "traffic_by_location_monthly",
+  #         url = azure$mongo_url)
+  # traffic_by_location_monthly <- mgo_traffic_by_location_monthly$aggregate() 
 
 } else{
   conn <- poolCheckout(db_pool)

@@ -72,7 +72,7 @@ build_plot_volume_change_by_date <- function(plot_data, pallet = graphColorPalle
   p_data <- plot_data  %>%
     group_by(date) %>%
     summarise(count = as.numeric(sum(count)),
-              avg_speed = sum(total_speed)/count,
+              avg_speed = sum(sum_speed)/count,
               day_count = sum(day_count),
               avg_daily_count = count / day_count ) %>%
     mutate(

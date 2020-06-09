@@ -91,7 +91,9 @@ aggregate_traffic  <- function(traffic_dataframe,group_by = c(
         var_wheelbase = as.numeric(sum(var_wheelbase)),
         var_headway = as.numeric(sum(var_headway)),
         var_gap = as.numeric(sum(var_gap)),
-        var_rho = as.numeric(sum(var_rho))
+        var_rho = as.numeric(sum(var_rho)),
+        
+        day_count = as.numeric(length(unique(date)))
       ) %>%
       mutate(
         count_pct = as.numeric(round(100 * count / total_count , digits = 1)),

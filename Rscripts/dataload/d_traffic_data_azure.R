@@ -208,7 +208,7 @@ load_traffic_to_cosmos <-
         "Reading file:",
         sourcefile,
         "columns:",
-        ncol(data),
+        ncol(bike_traffic_data_raw),
         "rows:",
         nrow(data)
       ))
@@ -313,7 +313,7 @@ load_traffic_to_cosmos <-
             group_by_timeseries, group_by_location, "month"
           )))
         
-        bike_traffic_data_location <- bike_traffic_data_monthly  %>%
+        bike_traffic_data_location <- bike_traffic_data_daily  %>%
           aggregate_traffic(c(group_by_location))
         
         mgo_traffic_by_location_aggregated$insert(bike_traffic_data_aggregated)
