@@ -45,11 +45,12 @@ load_traffic_to_cosmos <-
     }
     
     
+    mgo_traffic_by_location_aggregated_start_count <- mgo_traffic_by_location_aggregated$info()$collection
     print(
       paste(
         mgo_traffic_by_location_aggregated$info()$collection ,
         "starting record count:",
-        mgo_traffic_by_location_aggregated$count()
+        mgo_traffic_by_location_aggregated_start_count
       )
     )
     
@@ -324,6 +325,17 @@ load_traffic_to_cosmos <-
     
     #remove source data
     unlink(trafficdata_source_files, recursive = TRUE)
+    
+    mgo_traffic_by_location_aggregated_finish_count <- mgo_traffic_by_location_aggregated$count()
+    print(
+      paste(
+        mgo_traffic_by_location_aggregated$info()$collection ,
+        "final record count:",
+        mgo_traffic_by_location_aggregated_finish_count,
+        "inserted:",
+        mgo_traffic_by_location_aggregated_finish_count - mgo_traffic_by_location_aggregated_start_count
+      )
+    )
     
     print("db load completed")
   }
